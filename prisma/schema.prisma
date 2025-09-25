@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===============================================
+// MODELOS DE AUTENTICAÇÃO E USUÁRIO (INTEGRADO COM CLERK E WHATSAPP)
+// ===============================================
+model User {
+  id              String    @id
+  email           String    @unique
+  name            String?
+  imageUrl        String?
+  phoneNumber     String?   @unique
+  whatsappConsent Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  portfolios     Portfolio[]
+  monthlyResults MonthlyResult[]
+}
+
+// ===============================================
+// MODELOS DO CORE DO NEGÓCIO (REFINADOS)
+// ===============================================
+model Portfolio {
+  id        String   @id @default(cuid())
+  name      String   @default("Carteira Principal")
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets Asset[]
+
+  @@unique([userId, name])
+}
+
+model Asset {
+  id           String    @id @default(cuid())
+  portfolioId  String
+  symbol       String
+  type         AssetType
+  quantity     Decimal   @db.Decimal(18, 8) // CORRIGIDO: Maior precisão para quantidade
+  averagePrice Decimal   @db.Decimal(18, 8) // CORRIGIDO: Mudado para Decimal
+  targetPrice  Decimal?  @db.Decimal(18, 8) // CORRIGIDO: Mudado para Decimal
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  portfolio    Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([portfolioId, symbol])
+}
+
+model Transaction {
+  id        String          @id @default(cuid())
+  assetId   String
+  type      TransactionType
+  quantity  Decimal         @db.Decimal(18, 8) // MANTIDO: Ótima escolha, precisão aumentada
+  unitPrice Decimal         @db.Decimal(18, 8) // CORRIGIDO: Mudado para Decimal
+  fees      Decimal         @db.Decimal(18, 8) @default(0) // CORRIGIDO: Mudado para Decimal
+  date      DateTime        // CORRIGIDO: Campo CRÍTICO da data da operação adicionado de volta
+  createdAt DateTime        @default(now())
+  
+  // REMOVIDO: Campos 'name', 'category', 'created' e 'uopdatedAt' por serem redundantes ou incorretos
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+}
+
+model MonthlyResult {
+  id                 String        @id @default(cuid())
+  userId             String
+  month              Int
+  year               Int
+  assetType          AssetType
+  operationType      OperationType
+  totalSold          Decimal       @db.Decimal(18, 8) @default(0) // CORRIGIDO: Mudado para Decimal
+  netProfit          Decimal       @db.Decimal(18, 8) @default(0) // CORRIGIDO: Mudado para Decimal
+  accumulatedLoss    Decimal       @db.Decimal(18, 8) @default(0) // CORRIGIDO: Mudado para Decimal
+  taxBase            Decimal       @db.Decimal(18, 8) @default(0) // CORRIGIDO: Mudado para Decimal
+  taxDue             Decimal       @db.Decimal(18, 8) @default(0) // CORRIGIDO: Mudado para Decimal
+  isPaid             Boolean       @default(false)
+  notificationSentAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month, assetType, operationType])
+}
+
+// ===============================================
+// ENUMS - Tipos pré-definidos
+// ===============================================
+enum AssetType {
+  ACAO
+  FII
+  CRIPTO
+}
+
+enum TransactionType {
+  COMPRA
+  VENDA
+}
+
+enum OperationType {
+  SWING_TRADE
+  DAY_TRADE
+}
