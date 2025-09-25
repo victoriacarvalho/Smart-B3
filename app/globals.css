@@ -2,15 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
+    --card: transparent; /* Adjusted to be transparent */
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 348 100% 59%; /* Alterado para #FF2D55 */
+    --primary: #FF2D55; /* Cor alterada */
     --primary-foreground: 355.7 100% 97.3%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
@@ -19,45 +29,111 @@
     --accent: 240 4.8% 95.9%;
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 0 0 100%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 348 100% 59%; /* Alterado para #FF2D55 */
+    --ring: #FF2D55; /* Cor alterada */
     --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
   }
 
   .dark {
     --background: 20 14.3% 4.1%;
     --foreground: 0 0% 95%;
-    --card: 20 14.3% 4.1%;
+    --card: transparent; /* Adjusted to be transparent */
     --card-foreground: 0 0% 95%;
-    --popover: 20 14.3% 4.1%;
+    --popover: 0 0% 9%;
     --popover-foreground: 0 0% 95%;
-    --primary: 348 100% 59%; /* Alterado para #FF2D55 */
-    --primary-foreground: 355.7 100% 97.3%;
+    --primary: #FF2D55; /* Cor alterada */
+    --primary-foreground: 0 0 100%;
     --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0 100%;
+    --muted: 0 0% 15%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 12 6.5% 15.1%;
+    --accent-foreground: 0 0 100%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 0 85.7% 97.3%;
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
-    --ring: 348 100% 59%; /* Alterado para #FF2D55 */
+    --ring: #FF2D55; /* Cor alterada */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply h-full;
+  }
   body {
-    @apply bg-background text-foreground;
-    font-family: Arial, Helvetica, sans-serif;
+    @apply h-full bg-background text-foreground;
   }
 }
 
-@layer utilities {
+/* Responsividade para telas pequenas (celulares) */
+@media (max-width: 640px) {
+  body {
+    font-size: 14px; /* Ajuste o tamanho da fonte para telas menores */
+  }
+
+  .container {
+    width: 100%; /* Container ocupa 100% da largura em dispositivos móveis */
+    padding: 10px; /* Reduz o padding em telas menores */
+  }
+
+  h1 {
+    font-size: 1.5rem; /* Tamanho de fonte menor em telas pequenas */
+  }
+
+  /* Outros ajustes específicos para celulares */
   .text-balance {
     text-wrap: balance;
+  }
+
+  .card {
+    margin: 10px 0; /* Ajuste de margem nos cards */
+  }
+}
+
+/* Responsividade para tablets (telas entre 640px e 768px) */
+@media (min-width: 641px) and (max-width: 768px) {
+  .container {
+    width: 90%; /* Container ocupa 90% da largura */
+    padding: 15px; /* Padding aumentado para telas médias */
+  }
+
+  h1 {
+    font-size: 1.75rem; /* Tamanho de fonte adequado para tablets */
+  }
+
+  .card {
+    margin: 15px 0; /* Ajuste de margem nos cards */
+  }
+}
+
+/* Responsividade para telas maiores (desktops) */
+@media (min-width: 769px) {
+  .container {
+    width: 80%; /* Container ocupa 80% da largura */
+    padding: 20px; /* Padding maior em telas grandes */
+  }
+
+  h1 {
+    font-size: 2rem; /* Tamanho de fonte maior para desktops */
+  }
+
+  .card {
+    margin: 20px 0; /* Ajuste de margem nos cards */
   }
 }
