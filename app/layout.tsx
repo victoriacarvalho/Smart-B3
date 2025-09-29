@@ -1,11 +1,8 @@
 // app/layout.tsx
 
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/app/_components/ui/theme-provider"; // 1. IMporte o ThemeProvider
-
-const inter = Inter({ subsets: ["latin"] });
+import { ClerkProvider } from "@clerk/nextjs";
 
 export const metadata: Metadata = {
   title: "Smart B3",
@@ -19,18 +16,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {" "}
-      {/* Adicionar suppressHydrationWarning */}
       <body className="dark">
-        {/* 2. ENVOLVA O CHILDREN COM O PROVIDER */}
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <ClerkProvider> {children}</ClerkProvider>
       </body>
     </html>
   );
