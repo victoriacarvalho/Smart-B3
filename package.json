@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "prettier:fix": "prettier --write .",
     "prettier:check": "prettier --check .",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -34,7 +35,7 @@
     "eslint-config-next": "14.2.16",
     "postcss": "^8",
     "prettier": "^3.6.2",
-    "prettier-plugin-tailwind": "^2.2.12",
+    "prettier-plugin-tailwindcss": "^0.6.14",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }
