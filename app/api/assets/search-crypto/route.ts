@@ -1,58 +1,44 @@
-// src/app/api/assets/search/route.ts
+// src/app/api/assets/search-crypto/route.ts
 import { NextResponse } from "next/server";
 
-// A estrutura de dados para o cache permanece a mesma
-type CachedAsset = {
-  symbol: string;
-  name: string;
-  type: "ACAO" | "FII" | "CRIPTO";
+// Estrutura de dados ENRIQUECIDA para o nosso cache de cripto
+type CachedCryptoAsset = {
+  apiId: string; // O ID da CoinGecko para buscar o preço (ex: "solana")
+  symbol: string; // O ticker da moeda (ex: "sol")
+  name: string; // O nome completo (ex: "Solana")
+  type: "CRIPTO";
 };
 
-let cachedAssets: CachedAsset[] = [];
+let cachedAssets: CachedCryptoAsset[] = [];
 let lastFetchTimestamp = 0;
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // Cache de 24 horas
 
-// ===================================================================
-// VERSÃO CORRIGIDA DA FUNÇÃO DE CACHE
-// ===================================================================
-async function populateAssetCache() {
-  console.log("Iniciando a população do cache de ativos...");
-  const allFetchedAssets: CachedAsset[] = [];
-
+// Função CORRIGIDA para popular o cache
+async function populateCryptoCache() {
+  console.log("Iniciando a população do cache de criptomoedas...");
   try {
-    const coingeckoResponse = await fetch(
-      "https://api.coingecko.com/api/v3/coins/list",
+    const response = await fetch("https://api.coingecko.com/api/v3/coins/list");
+    if (!response.ok)
+      throw new Error(`CoinGecko API responded with status ${response.status}`);
+
+    const coingeckoData = await response.json();
+
+    // Mapeamos para a nossa nova estrutura de dados, salvando tudo que é importante
+    cachedAssets = coingeckoData.map(
+      (coin: any): CachedCryptoAsset => ({
+        apiId: coin.id,
+        symbol: coin.symbol,
+        name: coin.name,
+        type: "CRIPTO",
+      }),
     );
-    if (!coingeckoResponse.ok)
-      throw new Error(
-        `CoinGecko API responded with status ${coingeckoResponse.status}`,
-      );
 
-    const coingeckoData = await coingeckoResponse.json();
-    // ===================================================================
-    // PASSO 2: CORRIGINDO O MAPEAMENTO DE DADOS DA COINGECKO
-    // ===================================================================
-    const cryptoAssets: CachedAsset[] = coingeckoData.map((coin: any) => ({
-      apiId: coin.id, // O ID para buscar o preço
-      symbol: coin.symbol.toUpperCase(), // O ticker que o usuário busca!
-      name: coin.name,
-      type: "CRIPTO",
-    }));
-
+    lastFetchTimestamp = Date.now();
     console.log(
-      `Sucesso: ${cryptoAssets.length} ativos encontrados na CoinGecko.`,
+      `Sucesso: Cache de cripto populado com ${cachedAssets.length} ativos.`,
     );
-    allFetchedAssets.push(...cryptoAssets);
   } catch (error) {
     console.error("Falha ao buscar dados da CoinGecko:", error);
-  }
-
-  if (allFetchedAssets.length > 0) {
-    cachedAssets = allFetchedAssets;
-    lastFetchTimestamp = Date.now();
-    console.log(`Cache final populado com ${cachedAssets.length} ativos.`);
-  } else {
-    console.error("Não foi possível popular o cache de nenhuma fonte.");
   }
 }
 
@@ -61,7 +47,7 @@ export async function GET(request: Request) {
     cachedAssets.length === 0 ||
     Date.now() - lastFetchTimestamp > CACHE_DURATION_MS
   ) {
-    await populateAssetCache();
+    await populateCryptoCache();
   }
 
   const { searchParams } = new URL(request.url);
@@ -72,15 +58,37 @@ export async function GET(request: Request) {
   }
 
   // ===================================================================
-  // PASSO 3: CORRIGINDO A LÓGICA DE FILTRO PARA BUSCAR NO CAMPO CERTO
+  // NOVA LÓGICA DE BUSCA COM PONTUAÇÃO DE RELEVÂNCIA
   // ===================================================================
-  const filteredAssets = cachedAssets
-    .filter(
-      (asset) =>
-        asset.symbol.toLowerCase().includes(query) || // Busca pelo ticker (ex: "BTC")
-        asset.name.toLowerCase().includes(query), // Busca pelo nome (ex: "Bitcoin")
-    )
-    .slice(0, 10);
+  const scoredResults = cachedAssets
+    .map((asset) => {
+      let score = 0;
+      const lowerSymbol = asset.symbol.toLowerCase();
+      const lowerName = asset.name.toLowerCase();
 
-  return NextResponse.json(filteredAssets);
+      // Prioridade máxima: correspondência exata do símbolo
+      if (lowerSymbol === query) {
+        score = 5;
+      }
+      // Prioridade alta: símbolo começa com a busca
+      else if (lowerSymbol.startsWith(query)) {
+        score = 4;
+      }
+      // Prioridade média: nome começa com a busca
+      else if (lowerName.startsWith(query)) {
+        score = 3;
+      }
+      // Prioridade baixa: nome ou símbolo contém a busca
+      else if (lowerName.includes(query)) {
+        score = 2;
+      } else if (lowerSymbol.includes(query)) {
+        score = 1;
+      }
+
+      return { ...asset, score };
+    })
+    .filter((asset) => asset.score > 0) // Pega apenas os que tiveram alguma correspondência
+    .sort((a, b) => b.score - a.score); // Ordena pela maior pontuação
+
+  return NextResponse.json(scoredResults.slice(0, 10)); // Retorna os 10 mais relevantes
 }
