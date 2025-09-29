@@ -1,134 +1,134 @@
 name: CI Pipeline Avançada - Smart B3
 
 on:
-    push:
-        branches: [develop]
-    pull_request:
-        branches: [main, develop]
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [main, develop]
 
 jobs:
-    # Job 1: Focado em qualidade estática do código
-    lint-and-format:
-        name: 1. Lint e Formatação
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "20"
-                  cache: "npm"
-            - name: Install dependencies
-              run: npm install
-            - name: Verificar formatação (Prettier)
-              run: npm run prettier:check
-            - name: Rodar Linter (ESLint)
-              run: npm run lint
+  # Job 1: Focado em qualidade estática do código
+  lint-and-format:
+    name: 1. Lint e Formatação
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm install
+      - name: Verificar formatação (Prettier)
+        run: npm run prettier:check
+      - name: Rodar Linter (ESLint)
+        run: npm run lint
 
-    # Job 2: Focado em testes unitários e cobertura
-    unit-tests:
-        name: 2. Testes Unitários e Cobertura
-        runs-on: ubuntu-latest
-        needs: lint-and-format # Só roda se o Job 1 passar
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "20"
-                  cache: "npm"
-            - name: Install dependencies
-              run: npm install
-            - name: Rodar Testes Unitários com Cobertura
-              run: npm run test:coverage
-            - name: Upload do Relatório de Cobertura
-              uses: actions/upload-artifact@v4
-              with:
-                  name: coverage-report
-                  path: coverage/ # Pasta onde o Jest gera o relatório
+  # Job 2: Focado em testes unitários e cobertura
+  unit-tests:
+    name: 2. Testes Unitários e Cobertura
+    runs-on: ubuntu-latest
+    needs: lint-and-format # Só roda se o Job 1 passar
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm install
+      - name: Rodar Testes Unitários com Cobertura
+        run: npm run test:coverage
+      - name: Upload do Relatório de Cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/ # Pasta onde o Jest gera o relatório
 
-    # Job 3: Focado em testes que precisam de um BD real
-    integration-tests:
-        name: 3. Testes de Integração com Banco de Dados
-        runs-on: ubuntu-latest
-        needs: lint-and-format # Só roda se o Job 1 passar
+  # Job 3: Focado em testes que precisam de um BD real
+  integration-tests:
+    name: 3. Testes de Integração com Banco de Dados
+    runs-on: ubuntu-latest
+    needs: lint-and-format # Só roda se o Job 1 passar
 
-        # "Services" cria containers Docker para rodar junto com o Job
-        services:
-            # Inicia um container com a imagem oficial do PostgreSQL
-            postgres:
-                image: postgres:15
-                # Define as variáveis de ambiente para o BD de teste
-                env:
-                    POSTGRES_USER: testuser
-                    POSTGRES_PASSWORD: testpassword
-                    POSTGRES_DB: testdb
-                ports:
-                    - 5432:5432 # Mapeia a porta do container para o host
-                options: >-
-                    --health-cmd pg_isready
-                    --health-interval 10s
-                    --health-timeout 5s
-                    --health-retries 5
+    # "Services" cria containers Docker para rodar junto com o Job
+    services:
+      # Inicia um container com a imagem oficial do PostgreSQL
+      postgres:
+        image: postgres:15
+        # Define as variáveis de ambiente para o BD de teste
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432 # Mapeia a porta do container para o host
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "20"
-                  cache: "npm"
-            - name: Install dependencies
-              run: npm install
-            - name: Instalar Prisma CLI
-              run: npm install @prisma/client @prisma/cli --save-dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm install
+      - name: Instalar Prisma CLI
+        run: npm install @prisma/client @prisma/cli --save-dev
 
-            - name: Aplicar migrações do Prisma no BD de teste
-              # Usa as variáveis de ambiente definidas no "service"
-              run: npx prisma migrate deploy
-              env:
-                  DATABASE_URL: "postgresql://testuser:testpassword@localhost:5432/testdb?schema=public"
+      - name: Aplicar migrações do Prisma no BD de teste
+        # Usa as variáveis de ambiente definidas no "service"
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: "postgresql://testuser:testpassword@localhost:5432/testdb?schema=public"
 
-            - name: Rodar Testes de Integração
-              run: npm test # O Jest vai rodar os testes que usam o BD
-              env:
-                  DATABASE_URL: "postgresql://testuser:testpassword@localhost:5432/testdb?schema=public"
+      - name: Rodar Testes de Integração
+        run: npm test # O Jest vai rodar os testes que usam o BD
+        env:
+          DATABASE_URL: "postgresql://testuser:testpassword@localhost:5432/testdb?schema=public"
 
-    # Job 4: Focado na segurança das dependências
-    security-scan:
-        name: 4. Análise de Vulnerabilidades
-        runs-on: ubuntu-latest
-        needs: lint-and-format
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "20"
-                  cache: "npm"
-            - name: Install dependencies
-              run: npm install
-            - name: Rodar Auditoria de Segurança NPM
-              run: npm audit --audit-level=high
+  # Job 4: Focado na segurança das dependências
+  security-scan:
+    name: 4. Análise de Vulnerabilidades
+    runs-on: ubuntu-latest
+    needs: lint-and-format
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm install
+      - name: Rodar Auditoria de Segurança NPM
+        run: npm audit --audit-level=high
 
-    # Job 5: O build final, que depende de tudo ter passado
-    build:
-        name: 5. Build Final do Projeto
-        runs-on: ubuntu-latest
-        needs: [unit-tests, integration-tests, security-scan] # Roda se os Jobs 2, 3 e 4 passarem
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "20"
-                  cache: "npm"
-            - name: Install dependencies
-              run: npm install
-            - name: Build do Projeto Next.js
-              run: npm run build
+  # Job 5: O build final, que depende de tudo ter passado
+  build:
+    name: 5. Build Final do Projeto
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, security-scan] # Roda se os Jobs 2, 3 e 4 passarem
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm install
+      - name: Build do Projeto Next.js
+        run: npm run build

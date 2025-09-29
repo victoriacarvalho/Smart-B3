@@ -1,11 +1,7 @@
-import { Button } from "./_components/ui/button"
+import { Button } from "./_components/ui/button";
 
 const Home = () => {
-  return (    
+  return <Button> teste</Button>;
+};
 
-<Button> teste
-  
-</Button> );
-}
- 
 export default Home;
