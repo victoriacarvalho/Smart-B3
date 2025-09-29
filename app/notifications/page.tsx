@@ -1,5 +1,5 @@
-const Notifications = () => {
+const NotificationsPage = () => {
     return (  );
 }
  
-export default Notifications;
+export default NotificationsPage;

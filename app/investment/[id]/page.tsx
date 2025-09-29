@@ -1,5 +1,5 @@
-const Investment = ({ params: { id } }) => {
-  return <h1>Investment: {id}</h1>;
+const InvestmentPage = ({ params: { id } }) => {
+  return <h1>InvestmentPage: {id}</h1>;
 };
 
-export default Investment;
+export default InvestmentPage;

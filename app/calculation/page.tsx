@@ -1,5 +1,5 @@
-const Calculation = () => {
+const CalculationPage = () => {
     return (  );
 }
  
-export default Calculation;
+export default CalculationPage;

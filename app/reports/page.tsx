@@ -1,5 +1,5 @@
-const Reports = () => {
+const ReportsPage = () => {
     return (  );
 }
  
-export default Reports;
+export default ReportsPage;
