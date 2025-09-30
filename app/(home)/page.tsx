@@ -19,7 +19,7 @@ interface HomeProps {
 const DashboardPage = async ({ searchParams }: HomeProps) => {
   const { userId } = auth();
   if (!userId) {
-    redirect("/sign-in");
+    redirect("/login");
   }
 
   const currentYear = new Date().getFullYear();
