@@ -26,9 +26,9 @@ const Navbar = () => {
         </Link>
 
         <Link
-          href="/"
+          href="/transactions"
           className={
-            pathname === "/"
+            pathname === "/transactions"
               ? "font-bold text-primary"
               : "text-muted-foreground"
           }
@@ -37,9 +37,9 @@ const Navbar = () => {
         </Link>
 
         <Link
-          href="/"
+          href="/calculation"
           className={
-            pathname === "/"
+            pathname === "/calculation"
               ? "font-bold text-primary"
               : "text-muted-foreground"
           }
@@ -48,19 +48,9 @@ const Navbar = () => {
         </Link>
 
         <Link
-          href="/"
+          href="/reports"
           className={
-            pathname === "/"
-              ? "font-bold text-primary"
-              : "text-muted-foreground"
-          }
-        >
-          Histórico
-        </Link>
-        <Link
-          href="/"
-          className={
-            pathname === "/"
+            pathname === "/reports"
               ? "font-bold text-primary"
               : "text-muted-foreground"
           }
@@ -68,9 +58,9 @@ const Navbar = () => {
           Relatório
         </Link>
         <Link
-          href="/"
+          href="/notifications"
           className={
-            pathname === "/"
+            pathname === "/notifications"
               ? "font-bold text-primary"
               : "text-muted-foreground"
           }
