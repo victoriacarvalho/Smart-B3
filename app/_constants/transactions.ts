@@ -53,3 +53,24 @@ export const OPERATION_TYPE_OPTIONS = [
     label: OPERATION_TYPE_LABELS[OperationType.DAY_TRADE],
   },
 ];
+
+export enum RetentionPeriod {
+  CURTO_PRAZO = "CURTO_PRAZO",
+  LONGO_PRAZO = "LONGO_PRAZO",
+}
+
+export const RETENTION_PERIOD_LABELS = {
+  [RetentionPeriod.CURTO_PRAZO]: "Curto Prazo (Menos de 1 ano)",
+  [RetentionPeriod.LONGO_PRAZO]: "Longo Prazo (1 ano ou mais)",
+};
+
+export const RETENTION_PERIOD_OPTIONS = [
+  {
+    value: RetentionPeriod.CURTO_PRAZO,
+    label: RETENTION_PERIOD_LABELS[RetentionPeriod.CURTO_PRAZO],
+  },
+  {
+    value: RetentionPeriod.LONGO_PRAZO,
+    label: RETENTION_PERIOD_LABELS[RetentionPeriod.LONGO_PRAZO],
+  },
+];
