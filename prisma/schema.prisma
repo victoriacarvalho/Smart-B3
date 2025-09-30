@@ -67,7 +67,8 @@ model Transaction {
   fees      Decimal         @db.Decimal(18, 8) @default(0) // CORRIGIDO: Mudado para Decimal
   date      DateTime        // CORRIGIDO: Campo CRÍTICO da data da operação adicionado de volta
   createdAt DateTime        @default(now())
-  
+   operationType OperationType?
+  retentionPeriod RetentionPeriod?
   // REMOVIDO: Campos 'name', 'category', 'created' e 'uopdatedAt' por serem redundantes ou incorretos
 
   asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
@@ -110,4 +111,9 @@ enum TransactionType {
 enum OperationType {
   SWING_TRADE
   DAY_TRADE
+}
+
+enum RetentionPeriod {
+  CURTO_PRAZO
+  LONGO_PRAZO
 }
