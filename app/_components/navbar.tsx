@@ -9,7 +9,8 @@ const Navbar = () => {
   const pathname = usePathname();
 
   return (
-    <nav className="justfy-between flex border-b border-solid px-8 py-4">
+    <nav className="flex items-center justify-between border-b border-solid px-8 py-4">
+      {" "}
       {/* ESQUERDA */}
       <div className="flex items-center gap-10">
         <Image src="logo.svg" width={173} height={39} alt="Logo" />
@@ -68,7 +69,9 @@ const Navbar = () => {
           Alertas
         </Link>
       </div>
-      <UserButton showName />
+      <div>
+        <UserButton showName />
+      </div>
     </nav>
   );
 };
