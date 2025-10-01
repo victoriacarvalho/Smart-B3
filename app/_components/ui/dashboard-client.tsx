@@ -9,7 +9,7 @@ import {
 import SummaryCard from "./summary-card";
 
 interface SummaryCardsProps {
-  summary?: {
+  summary: {
     totalNetProfit: number;
     totalTaxDue: number;
     totalSold: number;
@@ -19,11 +19,6 @@ interface SummaryCardsProps {
 }
 
 const SummaryCards = ({ summary }: SummaryCardsProps) => {
-  // Adiciona uma verificação para o caso de 'summary' ser nulo ou indefinido
-  if (!summary) {
-    return null; // Ou renderize um estado de carregamento/vazio
-  }
-
   const isProfit = summary.totalNetProfit >= 0;
 
   return (
@@ -54,16 +49,19 @@ const SummaryCards = ({ summary }: SummaryCardsProps) => {
           icon={<PiggyBank className="h-5 w-5" />}
           title="Custo Total Investido"
           amount={summary.totalInvestedCost}
+          tooltip="Valor total de compra dos ativos atualmente em carteira."
         />
         <SummaryCard
           icon={<FileText className="h-5 w-5" />}
           title="Imposto Devido no Mês"
           amount={summary.totalTaxDue}
+          tooltip="Valor de imposto a ser pago referente às vendas com lucro no mês."
         />
         <SummaryCard
           icon={<CircleDollarSign className="h-5 w-5" />}
           title="Total Vendido no Mês"
           amount={summary.totalSold}
+          tooltip="Soma total das vendas de ativos realizadas no mês."
         />
       </div>
     </div>

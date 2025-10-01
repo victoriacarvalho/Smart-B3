@@ -1,3 +1,5 @@
+// app/api/dashboard/route.ts
+
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { db } from "@/app/_lib/prisma";
@@ -21,7 +23,7 @@ export async function GET(request: Request) {
       where: { userId },
       include: {
         assets: {
-          where: { quantity: { gt: 0 } }, // Pega apenas ativos que o usuário possui
+          where: { quantity: { gt: 0 } },
           include: {
             transactions: {
               orderBy: { date: "desc" },
@@ -46,10 +48,9 @@ export async function GET(request: Request) {
       });
     }
 
-    // 1. Busca de Preços em Paralelo
     const pricePromises = portfolio.assets.map((asset) => {
       const identifier = asset.type === "CRIPTO" ? asset.symbol : asset.symbol;
-      const url = `${request.nextUrl.origin}/api/assets/price?symbol=${identifier}&type=${asset.type}`;
+      const url = `${new URL(request.url).origin}/api/assets/price?symbol=${identifier}&type=${asset.type}`;
       return fetch(url)
         .then((res) => res.json())
         .catch(() => null);
@@ -64,7 +65,6 @@ export async function GET(request: Request) {
       }
     });
 
-    // 2. Cálculos usando os preços obtidos
     let totalInvestedCost = new Decimal(0);
     let currentPortfolioValue = new Decimal(0);
     const portfolioAllocation: { [key in AssetType]: Decimal } = {
@@ -85,7 +85,6 @@ export async function GET(request: Request) {
         portfolioAllocation[asset.type].plus(assetCurrentValue);
     }
 
-    // Lucro/Prejuízo Não Realizado (Total)
     const totalNetProfit = currentPortfolioValue.minus(totalInvestedCost);
 
     const salesInMonth = portfolio.assets.flatMap((asset) =>
@@ -98,7 +97,6 @@ export async function GET(request: Request) {
     );
 
     let totalSold = new Decimal(0);
-    // Este cálculo de lucro é referente apenas às VENDAS no mês
     let monthlyProfit = new Decimal(0);
     for (const sale of salesInMonth) {
       const asset = portfolio.assets.find((a) => a.id === sale.assetId);
@@ -124,7 +122,6 @@ export async function GET(request: Request) {
       )
       .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-    // 3. Monta a resposta final
     const responseData = {
       summary: {
         totalNetProfit: totalNetProfit.toNumber(),

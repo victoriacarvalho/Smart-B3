@@ -58,7 +58,7 @@ const upsertTransactionSchema = z
   });
 
 // ===============================================
-// FUNÇÃO INTERNA DE LÓGICA DE NEGÓCIO
+// FUNÇÃO INTERNA DE LÓGICA DE NEGÓCIO (CORRIGIDA)
 // ===============================================
 
 async function _recalculateAssetMetrics(assetId: string) {
@@ -67,27 +67,33 @@ async function _recalculateAssetMetrics(assetId: string) {
     orderBy: { date: "asc" },
   });
 
-  let totalQuantity = new Decimal(0);
-  let totalCost = new Decimal(0);
+  let totalPurchaseQuantity = new Decimal(0);
+  let totalPurchaseCost = new Decimal(0);
+  let totalSellQuantity = new Decimal(0);
 
   for (const tx of transactions) {
     if (tx.type === TransactionType.COMPRA) {
       const transactionCost = tx.quantity.times(tx.unitPrice).plus(tx.fees);
-      totalCost = totalCost.plus(transactionCost);
-      totalQuantity = totalQuantity.plus(tx.quantity);
+      totalPurchaseCost = totalPurchaseCost.plus(transactionCost);
+      totalPurchaseQuantity = totalPurchaseQuantity.plus(tx.quantity);
     } else if (tx.type === TransactionType.VENDA) {
-      totalQuantity = totalQuantity.minus(tx.quantity);
+      totalSellQuantity = totalSellQuantity.plus(tx.quantity);
     }
   }
 
-  const averagePrice = totalQuantity.isPositive()
-    ? totalCost.dividedBy(totalQuantity)
-    : new Decimal(0);
+  const currentQuantity = totalPurchaseQuantity.minus(totalSellQuantity);
+
+  // Calcula o preço médio apenas com base nas compras para evitar distorções.
+  // Se não houver compras, o preço médio é zero.
+  const averagePrice =
+    !totalPurchaseQuantity.isZero() && totalPurchaseQuantity.isPositive()
+      ? totalPurchaseCost.dividedBy(totalPurchaseQuantity)
+      : new Decimal(0);
 
   await db.asset.update({
     where: { id: assetId },
     data: {
-      quantity: totalQuantity,
+      quantity: currentQuantity,
       averagePrice: averagePrice,
     },
   });
@@ -134,40 +140,24 @@ export const deletePortfolio = async (params: z.infer<typeof idSchema>) => {
 export const findOrCreateAsset = async (params: {
   symbol: string;
   type: AssetType;
+  portfolioId: string;
 }) => {
   const { userId } = auth();
   if (!userId) throw new Error("Não autorizado.");
 
-  // 1. Garante que o utilizador existe no nosso banco de dados.
+  // Garante que o usuário existe no nosso banco de dados.
   await db.user.upsert({
     where: { id: userId },
-    update: {}, // Não é necessário atualizar
+    update: {},
     create: {
       id: userId,
-      email: "", // Clerk gere o email, podemos deixar vazio aqui
-      name: "", // Clerk gere o nome, podemos deixar vazio aqui
+      email: "",
+      name: "",
     },
   });
 
-  // 2. Procura pela carteira do utilizador.
-  let portfolio = await db.portfolio.findFirst({
-    where: { userId: userId },
-    orderBy: { createdAt: "asc" },
-  });
+  const portfolioId = params.portfolioId;
 
-  // 3. Se a carteira não existir, cria uma.
-  if (!portfolio) {
-    portfolio = await db.portfolio.create({
-      data: {
-        userId: userId,
-        name: "Carteira Principal",
-      },
-    });
-  }
-
-  const portfolioId = portfolio.id;
-
-  // 4. Procura pelo ativo dentro da carteira.
   const existingAsset = await db.asset.findUnique({
     where: {
       portfolioId_symbol: {
@@ -177,7 +167,6 @@ export const findOrCreateAsset = async (params: {
     },
   });
 
-  // 5. Se o ativo existir, converte os campos Decimal para number e retorna.
   if (existingAsset) {
     return {
       ...existingAsset,
@@ -189,7 +178,6 @@ export const findOrCreateAsset = async (params: {
     };
   }
 
-  // 6. Se o ativo não existir, cria um novo.
   const newAsset = await db.asset.create({
     data: {
       portfolioId: portfolioId,
@@ -200,7 +188,6 @@ export const findOrCreateAsset = async (params: {
     },
   });
 
-  // 7. Converte os campos Decimal para number antes de retornar.
   return {
     ...newAsset,
     quantity: Number(newAsset.quantity),

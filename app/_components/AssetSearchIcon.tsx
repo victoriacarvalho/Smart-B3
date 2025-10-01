@@ -12,7 +12,7 @@ export function AssetSearchIcon() {
     <>
       <Button
         variant="ghost"
-        size="icon"
+        size="lg"
         onClick={() => setIsDialogOpen(true)}
         aria-label="Buscar Ativo"
       >

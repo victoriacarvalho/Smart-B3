@@ -71,8 +71,8 @@ const Navbar = () => {
           Alertas
         </Link>
       </div>
+      <AssetSearchIcon />
       <div>
-        <AssetSearchIcon />
         <UserButton showName />
       </div>
     </nav>

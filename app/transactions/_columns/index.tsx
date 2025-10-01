@@ -8,13 +8,14 @@ import {
 } from "@prisma/client";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/app/_components/ui/button";
-import { ArrowUpDown, TrashIcon } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import {
   OPERATION_TYPE_LABELS,
   RETENTION_PERIOD_LABELS,
   TRANSACTION_TYPE_LABELS,
 } from "@/app/_constants/transactions";
-import Link from "next/link"; // Importe o Link do Next.js
+import Link from "next/link";
+import { TransactionActions } from "@/app/_components/transactions-actions";
 
 export type TransactionColumnData = Transaction & {
   asset: {
@@ -24,7 +25,6 @@ export type TransactionColumnData = Transaction & {
 };
 
 export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
-  // Coluna para o SÍMBOLO DO ATIVO (AGORA COM LINK)
   {
     accessorKey: "asset.symbol",
     header: ({ column }) => {
@@ -50,8 +50,6 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
       );
     },
   },
-
-  // Coluna para o TIPO (Compra / Venda)
   {
     accessorKey: "type",
     header: "Tipo",
@@ -62,22 +60,16 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
       return <span className={`font-semibold ${color}`}>{label}</span>;
     },
   },
-
-  // Coluna para a DATA
   {
     accessorKey: "date",
     header: "Data",
     cell: ({ row }) => new Date(row.original.date).toLocaleDateString("pt-BR"),
   },
-
-  // Coluna para a QUANTIDADE
   {
     accessorKey: "quantity",
     header: "Quantidade",
     cell: ({ row }) => Number(row.original.quantity).toLocaleString("pt-BR"),
   },
-
-  // Coluna para o PREÇO UNITÁRIO
   {
     accessorKey: "unitPrice",
     header: "Preço Unitário",
@@ -87,8 +79,6 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
         currency: "BRL",
       }).format(Number(row.original.unitPrice)),
   },
-
-  // Coluna para o VALOR TOTAL (calculado)
   {
     id: "totalValue",
     header: "Valor Total",
@@ -101,8 +91,6 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
       }).format(total);
     },
   },
-
-  // Coluna para o TIPO DE OPERAÇÃO (condicional)
   {
     id: "operationDetails",
     header: "Operação",
@@ -119,19 +107,12 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
       return <span className="text-muted-foreground">-</span>;
     },
   },
-
-  // Coluna de AÇÕES (Editar / Deletar)
+  // Coluna de AÇÕES (EDITAR / DELETAR)
   {
     id: "actions",
-    header: "Ações",
+    header: () => <div className="text-right">Ações</div>,
     cell: ({ row }) => {
-      return (
-        <div className="space-x-1 text-right">
-          <Button variant="ghost" size="icon" className="text-muted-foreground">
-            <TrashIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      );
+      return <TransactionActions transaction={row.original} />;
     },
   },
 ];

@@ -5,8 +5,6 @@ import Navbar from "@/app/_components/navbar";
 import TimeSelect from "./_components/time-select";
 import SummaryCards from "./_components/summary-cards";
 import LastTransactionsCard from "./_components/last-transactions-card";
-
-// ADICIONE A IMPORTAÇÃO QUE FALTAVA AQUI
 import AssetProfitPieChart from "./_components/asset-profit-pie-chart";
 
 interface HomeProps {
@@ -31,7 +29,7 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
     : currentMonth;
 
   if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-    redirect(`/dashboard?year=${currentYear}&month=${currentMonth}`);
+    redirect(`/?year=${currentYear}&month=${currentMonth}`);
   }
 
   const dashboardData = await getDashboard(year, month);
@@ -46,20 +44,15 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
         </div>
 
         <div className="grid h-full grid-cols-1 gap-6 overflow-hidden md:grid-cols-[2fr,1fr]">
-          {/* Coluna Principal (Esquerda) */}
           <div className="flex flex-col gap-6 overflow-hidden">
-            <SummaryCards
-              totalNetProfit={dashboardData.totalNetProfit}
-              totalTaxDue={dashboardData.totalTaxDue}
-              totalSold={dashboardData.totalSold}
-              totalInvestedCost={dashboardData.totalInvestedCost}
-            />
+            {/* CORREÇÃO: Passando o objeto 'summary' diretamente */}
+            <SummaryCards summary={dashboardData.summary} />
+
             <AssetProfitPieChart
               profitByAssetType={dashboardData.profitByAssetType}
             />
           </div>
 
-          {/* Coluna Lateral (Direita) */}
           <LastTransactionsCard
             lastTransactions={dashboardData.lastTransactions}
           />
