@@ -5,6 +5,8 @@ import { transactionColumns } from "./_columns";
 // IMPORTANTE: Importe o componente de DIÁLOGO principal, não o botão isolado.
 import { redirect } from "next/navigation";
 import Navbar from "../_components/navbar";
+import { AddTransactionDialog } from "../_components/add-transaction-dialog";
+import { ScrollArea } from "../_components/ui/scroll-area";
 
 const TransactionsPage = async () => {
   // 1. Obter o userId do usuário logado para segurança.
@@ -39,14 +41,18 @@ const TransactionsPage = async () => {
   return (
     <>
       <Navbar />
-      <div className="space-y-6 p-6">
+      <div className="flex flex-col space-y-6 overflow-hidden p-6">
+        {/* TÍTULO E BOTÃO */}
         <div className="flex w-full items-center justify-between">
-          {/* 3. Usar o componente de diálogo principal, que já contém o botão "Adicionar Transação" 
-            e toda a lógica de seleção de ativos. */}
+          <h1 className="text-2xl font-bold">Transações</h1>
+          <AddTransactionDialog />
         </div>
-
-        {/* A tabela agora receberá os dados no formato correto */}
-        <DataTable columns={transactionColumns} data={transactions} />
+        <ScrollArea className="h-full">
+          <DataTable
+            columns={transactionColumns}
+            data={JSON.parse(JSON.stringify(transactions))}
+          />
+        </ScrollArea>
       </div>
     </>
   );
