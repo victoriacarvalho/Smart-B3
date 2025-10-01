@@ -3,7 +3,6 @@ import { db } from "@/app/_lib/prisma";
 import { DataTable } from "@/app/_components/ui/data-table";
 import { transactionColumns } from "./_columns";
 // IMPORTANTE: Importe o componente de DIÁLOGO principal, não o botão isolado.
-import { AddTransactionDialog } from "@/app/_components/add-transaction-dialog";
 import { redirect } from "next/navigation";
 import Navbar from "../_components/navbar";
 

@@ -18,7 +18,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      // ADICIONE ESTAS LINHAS PARA CONSISTÊNCIA
+      "@/app/*": ["./app/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/hooks/*": ["./app/_hooks/*"]
     }
   },
   "include": [

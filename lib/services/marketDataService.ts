@@ -1,7 +1,7 @@
 // src/lib/services/marketDataService.ts
 import { AssetPriceData, AssetTypeForAPI } from "@/lib/types";
-import { fetchCryptoPrice } from "../../app/api/assets/coingecko";
-import { fetchStockOrFiiPrice } from "../../app/api/assets/brapi";
+import { fetchCryptoPrice } from "./api/coingecko";
+import { fetchStockOrFiiPrice } from "./api/brapi";
 
 // Cache em memória simples para evitar chamadas repetidas
 const cache = new Map<string, { data: AssetPriceData; timestamp: number }>();

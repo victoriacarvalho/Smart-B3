@@ -138,18 +138,25 @@ export const findOrCreateAsset = async (params: {
   const { userId } = auth();
   if (!userId) throw new Error("Não autorizado.");
 
+  // 1. Garante que o utilizador existe no nosso banco de dados.
+  await db.user.upsert({
+    where: { id: userId },
+    update: {}, // Não é necessário atualizar
+    create: {
+      id: userId,
+      email: "", // Clerk gere o email, podemos deixar vazio aqui
+      name: "", // Clerk gere o nome, podemos deixar vazio aqui
+    },
+  });
+
+  // 2. Procura pela carteira do utilizador.
   let portfolio = await db.portfolio.findFirst({
-    where: { userId },
+    where: { userId: userId },
     orderBy: { createdAt: "asc" },
   });
 
-  // ===================================================================
-  // CORREÇÃO DEFINITIVA: Se a carteira não existe, CRIE UMA.
-  // ===================================================================
+  // 3. Se a carteira não existir, cria uma.
   if (!portfolio) {
-    console.log(
-      `Nenhuma carteira encontrada para o utilizador ${userId}. A criar uma nova "Carteira Principal".`,
-    );
     portfolio = await db.portfolio.create({
       data: {
         userId: userId,
@@ -157,10 +164,10 @@ export const findOrCreateAsset = async (params: {
       },
     });
   }
-  // ===================================================================
 
   const portfolioId = portfolio.id;
 
+  // 4. Procura pelo ativo dentro da carteira.
   const existingAsset = await db.asset.findUnique({
     where: {
       portfolioId_symbol: {
@@ -170,11 +177,20 @@ export const findOrCreateAsset = async (params: {
     },
   });
 
+  // 5. Se o ativo existir, converte os campos Decimal para number e retorna.
   if (existingAsset) {
-    return existingAsset;
+    return {
+      ...existingAsset,
+      quantity: Number(existingAsset.quantity),
+      averagePrice: Number(existingAsset.averagePrice),
+      targetPrice: existingAsset.targetPrice
+        ? Number(existingAsset.targetPrice)
+        : null,
+    };
   }
 
-  return await db.asset.create({
+  // 6. Se o ativo não existir, cria um novo.
+  const newAsset = await db.asset.create({
     data: {
       portfolioId: portfolioId,
       symbol: params.symbol,
@@ -183,6 +199,14 @@ export const findOrCreateAsset = async (params: {
       averagePrice: 0,
     },
   });
+
+  // 7. Converte os campos Decimal para number antes de retornar.
+  return {
+    ...newAsset,
+    quantity: Number(newAsset.quantity),
+    averagePrice: Number(newAsset.averagePrice),
+    targetPrice: newAsset.targetPrice ? Number(newAsset.targetPrice) : null,
+  };
 };
 
 // ===============================================
