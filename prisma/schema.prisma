@@ -19,9 +19,25 @@ model User {
   whatsappConsent Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-
+  darfs Darf[]
   portfolios     Portfolio[]
   monthlyResults MonthlyResult[]
+}
+
+model Darf {
+  id          String    @id @default(cuid())
+  userId      String
+  month       Int       // Mês de apuração (ex: 9 para Setembro)
+  year        Int       // Ano de apuração (ex: 2025)
+  assetType   AssetType // ACAO, FII, ou CRIPTO
+  taxDue      Decimal   @db.Decimal(18, 8) // Valor do imposto a pagar
+  pdfUrl      String    // Caminho para o arquivo PDF gerado
+  isPaid      Boolean   @default(false) // Status para o usuário controlar
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month, assetType])
 }
 
 // ===============================================

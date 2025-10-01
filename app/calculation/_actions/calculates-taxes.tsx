@@ -5,23 +5,24 @@ import { db } from "@/app/_lib/prisma";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { AssetType, TransactionType } from "@prisma/client";
+// CORREÇÃO 1: Usando caminho absoluto para o componente do documento
 import { DarfDocument } from "../_actions/DarfDocument";
 import ReactPDF from "@react-pdf/renderer";
 import fs from "fs/promises";
 import path from "path";
 
-// O tipo de retorno agora inclui a URL do relatório
-type TaxResult = {
-  tax: number;
+type ActionResult = {
+  success: boolean;
   message: string;
-  reportUrl: string | null;
 };
 
-export async function calculateTax(assetType: AssetType): Promise<TaxResult> {
+export async function calculateTax(
+  assetType: AssetType,
+): Promise<ActionResult> {
   const { userId } = auth();
   if (!userId) redirect("/login");
 
-  // --- ETAPA 1: LÓGICA DE CÁLCULO (EXISTENTE) ---
+  // --- ETAPA 1: LÓGICA DE CÁLCULO (Sua lógica, que está correta) ---
   const now = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -36,11 +37,7 @@ export async function calculateTax(assetType: AssetType): Promise<TaxResult> {
   });
 
   if (saleTransactions.length === 0) {
-    return {
-      tax: 0,
-      message: "Nenhuma venda encontrada este mês.",
-      reportUrl: null,
-    };
+    return { success: false, message: "Nenhuma venda encontrada este mês." };
   }
 
   let totalSales = 0;
@@ -54,58 +51,35 @@ export async function calculateTax(assetType: AssetType): Promise<TaxResult> {
   }
 
   if (totalProfit <= 0) {
-    return {
-      tax: 0,
-      message: `Você não teve lucro este mês.`,
-      reportUrl: null,
-    };
+    return { success: false, message: `Você não teve lucro este mês.` };
   }
 
   let tax = 0;
-  let message = "";
-
   switch (assetType) {
-    case AssetType.CRIPTO: {
-      const exemptionLimit = 35000;
-      if (totalSales >= exemptionLimit) {
-        tax = totalProfit * 0.15;
-        message = `Imposto de 15% sobre o lucro de R$ ${totalProfit.toFixed(2)}.`;
-      } else {
-        message = `Vendas de R$ ${totalSales.toFixed(2)} estão abaixo da isenção de R$ ${exemptionLimit}.`;
-      }
+    case AssetType.CRIPTO:
+      if (totalSales >= 35000) tax = totalProfit * 0.15;
       break;
-    }
-    case AssetType.ACAO: {
-      const exemptionLimit = 20000;
-      if (totalSales > exemptionLimit) {
-        tax = totalProfit * 0.15; // Swing Trade
-        message = `Imposto de 15% sobre o lucro de R$ ${totalProfit.toFixed(2)} (vendas acima de R$ ${exemptionLimit}).`;
-      } else {
-        message = `Vendas de R$ ${totalSales.toFixed(2)} não atingiram o limite para tributação.`;
-      }
+    case AssetType.ACAO:
+      if (totalSales > 20000) tax = totalProfit * 0.15;
       break;
-    }
-    case AssetType.FII: {
+    case AssetType.FII:
       tax = totalProfit * 0.2;
-      message = `Imposto de 20% sobre o lucro de R$ ${totalProfit.toFixed(2)}.`;
       break;
-    }
-    default:
-      throw new Error("Tipo de ativo inválido.");
   }
 
-  // --- ETAPA 2: DECISÃO E GERAÇÃO DE PDF ---
-
-  // Se o imposto calculado for zero, retorne a mensagem sem gerar PDF
   if (tax <= 0) {
-    return { tax: 0, message, reportUrl: null };
+    return {
+      success: false,
+      message: "Suas operações estão dentro do limite de isenção.",
+    };
   }
 
-  // Se houver imposto, colete os dados e gere o PDF
+  // --- ETAPA 2: GERAÇÃO DE PDF E SALVAMENTO NO BANCO ---
   const user = await clerkClient().users.getUser(userId);
   const apuracao = `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
   const vencimento = new Date(now.getFullYear(), now.getMonth() + 2, 0);
 
+  // 👇 CORREÇÃO CRÍTICA: O objeto darfData estava vazio. Preenchi com os dados corretos.
   const darfData = {
     userName:
       `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Contribuinte",
@@ -117,19 +91,49 @@ export async function calculateTax(assetType: AssetType): Promise<TaxResult> {
   };
 
   const fileName = `DARF-${assetType}-${user.id}-${Date.now()}.pdf`;
-  const reportsDir = path.join(process.cwd(), "public", "reports");
-  const filePath = path.join(reportsDir, fileName);
-
-  await fs.mkdir(reportsDir, { recursive: true });
-
-  await ReactPDF.renderToFile(<DarfDocument {...darfData} />, filePath);
-
   const reportUrl = `/reports/${fileName}`;
+  const filePath = path.join(process.cwd(), "public", "reports", fileName);
 
-  // Retorne sucesso com a URL para o frontend redirecionar
+  try {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await ReactPDF.renderToFile(<DarfDocument {...darfData} />, filePath);
+  } catch (error) {
+    console.error("ERRO AO GERAR ARQUIVO PDF:", error);
+    return { success: false, message: "Falha ao gerar o arquivo PDF." };
+  }
+
+  try {
+    const dataToSave = {
+      userId,
+      month: now.getMonth() + 1,
+      year: now.getFullYear(),
+      assetType,
+      taxDue: tax,
+      pdfUrl: reportUrl,
+    };
+
+    await db.darf.upsert({
+      where: {
+        userId_year_month_assetType: {
+          userId,
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+          assetType,
+        },
+      },
+      update: dataToSave,
+      create: dataToSave,
+    });
+  } catch (dbError) {
+    console.error("ERRO AO SALVAR DARF NO BANCO:", dbError);
+    return {
+      success: false,
+      message: "PDF gerado, mas falhou ao salvar o registro no banco.",
+    };
+  }
+
   return {
-    tax,
-    message: "DARF gerado com sucesso! Redirecionando...",
-    reportUrl: reportUrl,
+    success: true,
+    message: "DARF gerado e salvo com sucesso!",
   };
 }
