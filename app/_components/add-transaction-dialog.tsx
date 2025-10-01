@@ -1,10 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { Asset, AssetType } from "@prisma/client";
-import { toast } from "sonner";
-
+import { startTransition, useState } from "react";
+import { AssetType } from "@prisma/client";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -24,68 +21,81 @@ import {
 import { AssetSearch } from "./AssetSearch";
 import { ASSET_TYPE_OPTIONS } from "../_constants/transactions";
 import UpsertTransactionDialog from "./upsert-transaction-dialog";
+import { findOrCreateAsset, upsertTransaction } from "../_actions/index";
 
-// Verifique se este caminho está correto para sua estrutura de pastas
-import { findOrCreateAsset, upsertTransaction } from "@/app/_actions";
-
-type SelectedAsset = {
+// Tipos para gerenciar o estado dos ativos
+type SearchResult = {
   symbol: string;
   name: string;
-  apiId?: string;
+  apiId?: string; // Importante para cripto
+};
+
+type ActiveAsset = {
+  id: string;
+  symbol: string;
+  name: string;
+  type: AssetType;
 };
 
 export function AddTransactionDialog() {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
   const [isSelectionOpen, setIsSelectionOpen] = useState(false);
   const [isUpsertOpen, setIsUpsertOpen] = useState(false);
-
   const [selectedAssetType, setSelectedAssetType] = useState<AssetType | null>(
     null,
   );
-  const [activeAsset, setActiveAsset] = useState<SelectedAsset | null>(null);
+  const [activeAsset, setActiveAsset] = useState<ActiveAsset | null>(null);
+  const [isFindingAsset, setIsFindingAsset] = useState(false);
 
-  const [dbAsset, setDbAsset] = useState<Asset | null>(null);
-  const [assetPrice, setAssetPrice] = useState<number | null>(null);
-  const [isLoadingData, setIsLoadingData] = useState(false);
-
-  const handleAssetSelection = async (asset: SelectedAsset) => {
-    setActiveAsset(asset);
-    setIsLoadingData(true);
-    const loadingToast = toast.loading("Buscando dados do ativo...");
-
-    try {
-      const foundAsset = await findOrCreateAsset({
-        symbol: asset.symbol,
-        type: selectedAssetType!,
-      });
-      setDbAsset(foundAsset);
-
-      const symbolToFetch =
-        foundAsset.type === "CRIPTO" ? asset.apiId! : foundAsset.symbol;
-      const priceResponse = await fetch(
-        `/api/assets/price?symbol=${symbolToFetch}&type=${foundAsset.type}`,
-      );
-      if (!priceResponse.ok)
-        throw new Error("Não foi possível buscar o preço.");
-
-      const priceData = await priceResponse.json();
-      setAssetPrice(priceData.price);
-
-      toast.dismiss(loadingToast);
-    } catch (error) {
-      console.error(error);
-      toast.dismiss(loadingToast);
-      toast.error("Erro ao buscar dados do ativo. Tente novamente.");
-      setActiveAsset(null);
-    } finally {
-      setIsLoadingData(false);
-    }
+  const handleReset = () => {
+    setIsSelectionOpen(false);
+    setIsUpsertOpen(false);
+    setSelectedAssetType(null);
+    setActiveAsset(null);
   };
 
+  const handleAssetSelection = async (asset: SearchResult) => {
+    if (!selectedAssetType) return;
+
+    setIsFindingAsset(true);
+    startTransition(async () => {
+      try {
+        // 1. Busca a carteira (que agora será criada automaticamente se não existir)
+        const portfolioResponse = await fetch("/api/portfolio");
+        if (!portfolioResponse.ok) {
+          throw new Error("Falha ao obter a carteira do usuário.");
+        }
+
+        const portfolios = await portfolioResponse.json();
+        const portfolioId = portfolios[0]?.id;
+
+        if (!portfolioId) {
+          throw new Error("Não foi possível identificar a carteira principal.");
+        }
+
+        // 2. Chama a Server Action para encontrar ou criar o ativo no DB
+        const dbAsset = await findOrCreateAsset({
+          portfolioId: portfolioId,
+          // Para cripto, o symbol no DB deve ser o 'apiId' para garantir unicidade
+          symbol: (asset as any).apiId || asset.symbol,
+          type: selectedAssetType,
+        });
+
+        setActiveAsset({
+          id: dbAsset.id,
+          symbol: asset.symbol.toUpperCase(),
+          name: asset.name,
+          type: dbAsset.type,
+        });
+      } catch (error) {
+        console.error("Erro no fluxo de seleção de ativo:", error);
+        // Adicionar um toast de erro para o usuário aqui é uma boa prática
+      } finally {
+        setIsFindingAsset(false);
+      }
+    });
+  };
   const handleProceedToForm = () => {
-    // Apenas gerencia a transição entre os modais
+    if (!activeAsset) return;
     setIsSelectionOpen(false);
     setIsUpsertOpen(true);
   };
@@ -94,23 +104,11 @@ export function AddTransactionDialog() {
     startTransition(async () => {
       try {
         await upsertTransaction(data);
-        toast.success("Transação salva com sucesso!");
-        setIsUpsertOpen(false); // Fechar o formulário vai acionar o onOpenChange dele
-        router.refresh();
+        handleReset(); // Reseta e fecha tudo após o sucesso
       } catch (error) {
-        console.error(error);
-        toast.error("Falha ao salvar a transação.");
+        console.error("Erro ao salvar transação:", error);
       }
     });
-  };
-
-  const handleReset = () => {
-    // Esta função agora é chamada de forma segura
-    setIsSelectionOpen(false);
-    setSelectedAssetType(null);
-    setActiveAsset(null);
-    setDbAsset(null);
-    setAssetPrice(null);
   };
 
   return (
@@ -118,35 +116,27 @@ export function AddTransactionDialog() {
       <Dialog
         open={isSelectionOpen}
         onOpenChange={(open) => {
-          // O reset só acontece se o usuário fechar o modal de seleção manualmente
           setIsSelectionOpen(open);
-          if (!open) {
-            handleReset();
-          }
+          if (!open) handleReset();
         }}
       >
         <DialogTrigger asChild>
-          <Button onClick={() => setIsSelectionOpen(true)}>
-            Adicionar Transação
-          </Button>
+          <Button>Adicionar Transação</Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Adicionar Nova Transação</DialogTitle>
             <DialogDescription>
-              Primeiro, selecione o tipo e o ativo para continuar.
+              Selecione o tipo e o ativo para continuar.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Tipo de ativo</label>
               <Select
                 onValueChange={(value: AssetType) => {
                   setSelectedAssetType(value);
                   setActiveAsset(null);
-                  setDbAsset(null);
-                  setAssetPrice(null);
                 }}
               >
                 <SelectTrigger>
@@ -165,7 +155,7 @@ export function AddTransactionDialog() {
             {(selectedAssetType === AssetType.ACAO ||
               selectedAssetType === AssetType.FII) && (
               <AssetSearch
-                searchEndpoint="/api/assets/search"
+                searchEndpoint="/api/assets/search-stocks"
                 placeholder="Buscar Ação/FII..."
                 onAssetSelect={handleAssetSelection}
               />
@@ -178,32 +168,24 @@ export function AddTransactionDialog() {
               />
             )}
 
-            {activeAsset && (
+            {isFindingAsset && (
+              <p className="text-sm text-muted-foreground">
+                Verificando ativo...
+              </p>
+            )}
+
+            {activeAsset && !isFindingAsset && (
               <div className="space-y-4 border-t pt-4">
                 <div className="rounded-lg border bg-muted p-3 text-sm">
                   <p>
-                    <strong>Símbolo:</strong> {activeAsset.symbol.toUpperCase()}
+                    <strong>Símbolo:</strong> {activeAsset.symbol}
                   </p>
                   <p>
-                    <strong>Preço Atual:</strong>{" "}
-                    {isLoadingData
-                      ? "Buscando..."
-                      : assetPrice
-                        ? new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(assetPrice)
-                        : "N/A"}
+                    <strong>Nome:</strong> {activeAsset.name}
                   </p>
                 </div>
-                <Button
-                  onClick={handleProceedToForm}
-                  className="w-full"
-                  disabled={isLoadingData || !assetPrice}
-                >
-                  {isLoadingData
-                    ? "Carregando Dados..."
-                    : `Registrar Transação`}
+                <Button onClick={handleProceedToForm} className="w-full">
+                  Registrar Transação para {activeAsset.symbol}
                 </Button>
               </div>
             )}
@@ -211,26 +193,21 @@ export function AddTransactionDialog() {
         </DialogContent>
       </Dialog>
 
-      {/* =================================================================== */}
-      {/* CORREÇÃO: A lógica de reset foi movida para o onOpenChange do 2º diálogo */}
-      {/* =================================================================== */}
-      {dbAsset && assetPrice && (
+      {/* CORREÇÃO APLICADA AQUI:
+        O diálogo do formulário só é renderizado quando temos um 'activeAsset' válido.
+        Isso garante que a prop 'assetInfo' nunca será undefined.
+      */}
+      {isUpsertOpen && activeAsset && selectedAssetType && (
         <UpsertTransactionDialog
           isOpen={isUpsertOpen}
-          // Em vez de 'setIsOpen', usamos uma função que reseta tudo ao fechar
-          onOpenChange={(open) => {
-            setIsUpsertOpen(open);
-            if (!open) {
-              // Quando o formulário fecha, por qualquer motivo, o fluxo acabou. Resetamos tudo.
-              handleReset();
-            }
-          }}
+          setIsOpen={setIsUpsertOpen}
           onSubmit={handleSubmitTransaction}
-          assetId={dbAsset.id}
-          assetType={dbAsset.type}
-          assetSymbol={dbAsset.symbol}
-          assetName={activeAsset?.name ?? ""}
-          initialUnitPrice={assetPrice}
+          assetInfo={{
+            assetId: activeAsset.id,
+            symbol: activeAsset.symbol,
+            name: activeAsset.name,
+            type: activeAsset.type,
+          }}
         />
       )}
     </>

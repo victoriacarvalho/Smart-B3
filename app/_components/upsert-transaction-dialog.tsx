@@ -1,4 +1,7 @@
-import { AssetType, OperationType } from "@prisma/client";
+"use client";
+
+import { useEffect, useState } from "react"; // 1. IMPORTAR HOOKS
+import { AssetType, OperationType, TransactionType } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,34 +36,49 @@ import {
   OPERATION_TYPE_OPTIONS,
   RetentionPeriod,
   RETENTION_PERIOD_OPTIONS,
+  TRANSACTION_TYPE_OPTIONS,
 } from "../_constants/transactions";
+import { NumericFormat } from "react-number-format";
+import { Input } from "./ui/input";
+
+// 2. INTERFACE APRIMORADA para receber o `apiId` opcional
+interface ActiveAsset {
+  assetId: string;
+  symbol: string;
+  name: string;
+  type: AssetType;
+  apiId?: string;
+}
 
 interface UpsertTransactionDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   onSubmit: (data: FormSchema) => Promise<void>;
-  assetSymbol: string;
-  assetName: string;
-  assetType: AssetType;
+  assetInfo: ActiveAsset; // Usando a nova interface
   transactionId?: string;
   defaultValues?: Partial<FormSchema>;
 }
 
+// O schema do formulário permanece o mesmo
 const formSchema = z
   .object({
     id: z.string().optional(),
-    cost: z.number().min(0, "O custo não pode ser negativo."),
-    saleValue: z.number().min(0, "O valor da venda não pode ser negativo."),
+    assetId: z.string().cuid(),
+    assetType: z.nativeEnum(AssetType), // Campo auxiliar para validação
+    type: z.nativeEnum(TransactionType, {
+      required_error: "O tipo (Compra/Venda) é obrigatório.",
+    }),
+    quantity: z.number().positive("A quantidade deve ser maior que zero."),
+    unitPrice: z.number().positive("O preço unitário deve ser maior que zero."),
+    fees: z.number().min(0).optional().default(0),
     date: z.date({ required_error: "A data é obrigatória." }),
-    type: z.nativeEnum(AssetType),
-    symbol: z.string(),
-    // Campos condicionais
     operationType: z.nativeEnum(OperationType).optional(),
     retentionPeriod: z.nativeEnum(RetentionPeriod).optional(),
   })
   .superRefine((data, ctx) => {
     if (
-      (data.type === AssetType.ACAO || data.type === AssetType.CRIPTO) &&
+      (data.assetType === AssetType.ACAO ||
+        data.assetType === AssetType.CRIPTO) &&
       !data.operationType
     ) {
       ctx.addIssue({
@@ -69,7 +87,7 @@ const formSchema = z
         path: ["operationType"],
       });
     }
-    if (data.type === AssetType.FII && !data.retentionPeriod) {
+    if (data.assetType === AssetType.FII && !data.retentionPeriod) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "O prazo de retenção é obrigatório.",
@@ -84,9 +102,7 @@ const UpsertTransactionDialog = ({
   isOpen,
   setIsOpen,
   onSubmit,
-  assetSymbol,
-  assetName,
-  assetType,
+  assetInfo,
   transactionId,
   defaultValues,
 }: UpsertTransactionDialogProps) => {
@@ -94,13 +110,39 @@ const UpsertTransactionDialog = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       ...defaultValues,
-      cost: defaultValues?.cost ?? 0,
-      saleValue: defaultValues?.saleValue ?? 0,
       date: defaultValues?.date ?? new Date(),
-      type: assetType,
-      symbol: assetSymbol,
+      assetId: assetInfo.assetId,
+      assetType: assetInfo.type,
     },
   });
+
+  // 3. HOOKS para observar campos e gerenciar estado
+  const { watch, setValue } = form;
+  const quantity = watch("quantity");
+  const unitPrice = watch("unitPrice");
+  const [isFetchingPrice, setIsFetchingPrice] = useState(false);
+
+  // 4. LÓGICA CORRIGIDA: Efeito para buscar o preço imediatamente ao abrir o diálogo
+  useEffect(() => {
+    const identifier =
+      assetInfo.type === AssetType.CRIPTO ? assetInfo.apiId : assetInfo.symbol;
+
+    if (identifier) {
+      setIsFetchingPrice(true);
+      fetch(`/api/assets/price?symbol=${identifier}&type=${assetInfo.type}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Preço não encontrado");
+          return res.json();
+        })
+        .then((data) => {
+          if (data.price) {
+            setValue("unitPrice", data.price, { shouldValidate: true });
+          }
+        })
+        .catch((err) => console.error("Erro ao buscar preço:", err))
+        .finally(() => setIsFetchingPrice(false));
+    }
+  }, [assetInfo, setValue]); // Dispara quando as informações do ativo estiverem prontas
 
   const handleFormSubmit = async (data: FormSchema) => {
     try {
@@ -112,6 +154,15 @@ const UpsertTransactionDialog = ({
     }
   };
 
+  // 5. Lógica para calcular e exibir o valor total (sem alterações)
+  const estimatedTotal =
+    quantity > 0 && unitPrice > 0
+      ? (quantity * unitPrice).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })
+      : null;
+
   const isUpdate = Boolean(transactionId);
 
   return (
@@ -119,17 +170,16 @@ const UpsertTransactionDialog = ({
       open={isOpen}
       onOpenChange={(open) => {
         setIsOpen(open);
-        if (!open) {
-          form.reset();
-        }
+        if (!open) form.reset();
       }}
     >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            Adicionar Transação para {assetSymbol.toUpperCase()}
+            {isUpdate ? "Editar" : "Adicionar"} Transação para{" "}
+            {assetInfo.symbol.toUpperCase()}
           </DialogTitle>
-          <DialogDescription>{assetName}</DialogDescription>
+          <DialogDescription>{assetInfo.name}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -139,12 +189,44 @@ const UpsertTransactionDialog = ({
           >
             <FormField
               control={form.control}
-              name="cost"
+              name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Custo da Compra (R$)</FormLabel>
+                  <FormLabel>Tipo</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione (Compra/Venda)..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {TRANSACTION_TYPE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantidade</FormLabel>
                   <FormControl>
-                    <MoneyInput
+                    <NumericFormat
+                      customInput={Input}
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      decimalScale={8}
                       placeholder="0,00"
                       value={field.value}
                       onValueChange={({ floatValue }) =>
@@ -159,10 +241,10 @@ const UpsertTransactionDialog = ({
 
             <FormField
               control={form.control}
-              name="saleValue"
+              name="unitPrice"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Valor da Venda (R$)</FormLabel>
+                  <FormLabel>Preço Unitário (R$)</FormLabel>
                   <FormControl>
                     <MoneyInput
                       placeholder="0,00"
@@ -172,10 +254,24 @@ const UpsertTransactionDialog = ({
                       }
                     />
                   </FormControl>
+                  {isFetchingPrice && (
+                    <p className="animate-pulse text-xs text-muted-foreground">
+                      Buscando cotação atual...
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {estimatedTotal && !isFetchingPrice && (
+              <div className="rounded-md border bg-muted p-3 text-sm">
+                <span className="text-muted-foreground">
+                  Valor Total Estimado:{" "}
+                </span>
+                <span className="font-bold">{estimatedTotal}</span>
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -191,9 +287,8 @@ const UpsertTransactionDialog = ({
               )}
             />
 
-            {/* Campo condicional para Ação ou Cripto */}
-            {(assetType === AssetType.ACAO ||
-              assetType === AssetType.CRIPTO) && (
+            {(assetInfo.type === AssetType.ACAO ||
+              assetInfo.type === AssetType.CRIPTO) && (
               <FormField
                 control={form.control}
                 name="operationType"
@@ -223,8 +318,7 @@ const UpsertTransactionDialog = ({
               />
             )}
 
-            {/* Campo condicional para FII */}
-            {assetType === AssetType.FII && (
+            {assetInfo.type === AssetType.FII && (
               <FormField
                 control={form.control}
                 name="retentionPeriod"
@@ -260,8 +354,12 @@ const UpsertTransactionDialog = ({
                   Cancelar
                 </Button>
               </DialogClose>
-              <Button type="submit">
-                {isUpdate ? "Atualizar" : "Adicionar"}
+              <Button type="submit" disabled={isFetchingPrice}>
+                {isFetchingPrice
+                  ? "Aguarde..."
+                  : isUpdate
+                    ? "Atualizar"
+                    : "Adicionar"}
               </Button>
             </DialogFooter>
           </form>
