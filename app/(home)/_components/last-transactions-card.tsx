@@ -3,11 +3,19 @@
 import { Button } from "@/app/_components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/app/_components/ui/card";
 import { ScrollArea } from "@/app/_components/ui/scroll-area";
-import { DashboardTransaction } from "../types";
 import Link from "next/link";
 import { TransactionType } from "@prisma/client";
 import { cn } from "@/lib/utils";
-import AssetTypeIcon from "./asset-type-icon"; // Criaremos este componente a seguir
+import AssetTypeIcon from "./asset-type-icon";
+import { Transaction } from "@prisma/client"; // Ajuste a importação se necessário
+
+// Tipo para as transações que vêm do servidor
+export type DashboardTransaction = Transaction & {
+  asset: {
+    symbol: string;
+    type: AssetType;
+  };
+};
 
 interface LastTransactionsCardProps {
   lastTransactions: DashboardTransaction[];
@@ -17,7 +25,8 @@ const LastTransactionsCard = ({
   lastTransactions,
 }: LastTransactionsCardProps) => {
   return (
-    <ScrollArea className="rounded-md border">
+    // Adiciona altura total para preencher o espaço no grid
+    <ScrollArea className="h-full rounded-md border">
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle className="font-bold">Últimas Transações</CardTitle>
         <Button variant="outline" className="rounded-full font-bold" asChild>
@@ -26,15 +35,13 @@ const LastTransactionsCard = ({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Adiciona uma mensagem caso não haja transações */}
         {lastTransactions.length === 0 && (
           <p className="pt-4 text-sm text-muted-foreground">
-            Nenhuma transação registrada no período.
+            Nenhuma transação registrada.
           </p>
         )}
 
         {lastTransactions.map((transaction) => {
-          // Calcula o valor total da operação
           const totalValue =
             Number(transaction.quantity) * Number(transaction.unitPrice) +
             Number(transaction.fees);
@@ -47,14 +54,12 @@ const LastTransactionsCard = ({
               className="flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                {/* Ícone dinâmico baseado no tipo de ativo */}
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
                   <AssetTypeIcon
                     type={transaction.asset.type}
                     className="h-5 w-5"
                   />
                 </div>
-
                 <div>
                   <p className="text-sm font-bold">
                     {transaction.asset.symbol.toUpperCase()}
@@ -65,7 +70,6 @@ const LastTransactionsCard = ({
                 </div>
               </div>
 
-              {/* Valor formatado com cor e prefixo dinâmicos */}
               <p
                 className={cn(
                   "text-sm font-bold",
