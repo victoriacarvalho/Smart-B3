@@ -14,11 +14,8 @@ import {
   RETENTION_PERIOD_LABELS,
   TRANSACTION_TYPE_LABELS,
 } from "@/app/_constants/transactions";
-// Você precisará criar ou adaptar este botão de edição
-// import EditTransactionButton from "../_components/edit-transaction-button";
+import Link from "next/link"; // Importe o Link do Next.js
 
-// 1. Tipo de dado que a tabela espera receber
-// Sua query Prisma deve ser: `db.transaction.findMany({ include: { asset: true } })`
 export type TransactionColumnData = Transaction & {
   asset: {
     symbol: string;
@@ -27,7 +24,7 @@ export type TransactionColumnData = Transaction & {
 };
 
 export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
-  // Coluna para o SÍMBOLO DO ATIVO
+  // Coluna para o SÍMBOLO DO ATIVO (AGORA COM LINK)
   {
     accessorKey: "asset.symbol",
     header: ({ column }) => {
@@ -42,10 +39,14 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
       );
     },
     cell: ({ row }) => {
+      const { assetId, asset } = row.original;
       return (
-        <div className="font-medium">
-          {row.original.asset.symbol.toUpperCase()}
-        </div>
+        <Link
+          href={`/investment/${assetId}`}
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {asset.symbol.toUpperCase()}
+        </Link>
       );
     },
   },
@@ -126,7 +127,6 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
     cell: ({ row }) => {
       return (
         <div className="space-x-1 text-right">
-          {/* <EditTransactionButton transaction={row.original} /> */}
           <Button variant="ghost" size="icon" className="text-muted-foreground">
             <TrashIcon className="h-4 w-4" />
           </Button>

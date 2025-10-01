@@ -7,9 +7,8 @@ import Link from "next/link";
 import { TransactionType } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import AssetTypeIcon from "./asset-type-icon";
-import { Transaction } from "@prisma/client"; // Ajuste a importação se necessário
+import { Transaction } from "@prisma/client";
 
-// Tipo para as transações que vêm do servidor
 export type DashboardTransaction = Transaction & {
   asset: {
     symbol: string;
@@ -25,7 +24,6 @@ const LastTransactionsCard = ({
   lastTransactions,
 }: LastTransactionsCardProps) => {
   return (
-    // Adiciona altura total para preencher o espaço no grid
     <ScrollArea className="h-full rounded-md border">
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle className="font-bold">Últimas Transações</CardTitle>
@@ -34,7 +32,7 @@ const LastTransactionsCard = ({
         </Button>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-2">
         {lastTransactions.length === 0 && (
           <p className="pt-4 text-sm text-muted-foreground">
             Nenhuma transação registrada.
@@ -49,40 +47,43 @@ const LastTransactionsCard = ({
           const isSale = transaction.type === TransactionType.VENDA;
 
           return (
-            <div
+            <Link
+              href={`/investment/${transaction.assetId}`}
               key={transaction.id}
-              className="flex items-center justify-between"
+              className="block rounded-lg p-3 transition-colors hover:bg-muted/50"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                  <AssetTypeIcon
-                    type={transaction.asset.type}
-                    className="h-5 w-5"
-                  />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                    <AssetTypeIcon
+                      type={transaction.asset.type}
+                      className="h-5 w-5"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">
+                      {transaction.asset.symbol.toUpperCase()}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold">
-                    {transaction.asset.symbol.toUpperCase()}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(transaction.date).toLocaleDateString("pt-BR")}
-                  </p>
-                </div>
-              </div>
 
-              <p
-                className={cn(
-                  "text-sm font-bold",
-                  isSale ? "text-green-600" : "text-red-600",
-                )}
-              >
-                {isSale ? "+" : "-"}
-                {new Intl.NumberFormat("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                }).format(totalValue)}
-              </p>
-            </div>
+                <p
+                  className={cn(
+                    "text-sm font-bold",
+                    isSale ? "text-green-600" : "text-red-600",
+                  )}
+                >
+                  {isSale ? "+" : "-"}
+                  {new Intl.NumberFormat("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  }).format(totalValue)}
+                </p>
+              </div>
+            </Link>
           );
         })}
       </CardContent>
