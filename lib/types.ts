@@ -7,5 +7,7 @@ export enum AssetTypeForAPI {
 export type AssetPriceData = {
   symbol: string;
   price: number;
+  change?: number;
+  changePercent?: number;
   source: string;
 };

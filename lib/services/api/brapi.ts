@@ -1,4 +1,3 @@
-// lib/services/api/brapi.ts
 import { AssetPriceData } from "@/lib/types";
 
 export async function fetchStockOrFiiPrice(
@@ -10,13 +9,11 @@ export async function fetchStockOrFiiPrice(
   try {
     const response = await fetch(url, {
       headers: {
-        // CORREÇÃO: Envia o token no cabeçalho de autorização
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     });
 
     if (!response.ok) {
-      // Retorna nulo em vez de lançar erro para a rota tratar
       console.error(
         `Brapi API failed for ${symbol} with status: ${response.status}`,
       );
@@ -26,7 +23,7 @@ export async function fetchStockOrFiiPrice(
     const data = await response.json();
     const result = data?.results?.[0];
 
-    if (!result || !result.regularMarketPrice) {
+    if (!result || result.regularMarketPrice === null) {
       console.warn(`Price for symbol ${symbol} not found in Brapi response`);
       return null;
     }
@@ -34,6 +31,8 @@ export async function fetchStockOrFiiPrice(
     return {
       symbol: result.symbol,
       price: result.regularMarketPrice,
+      change: result.regularMarketChange,
+      changePercent: result.regularMarketChangePercent,
       source: "brapi",
     };
   } catch (error) {
