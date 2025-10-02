@@ -71,7 +71,6 @@ export function TransactionActions({ transaction }: TransactionActionsProps) {
           isOpen={isEditOpen}
           setIsOpen={setIsEditOpen}
           onSubmit={handleEditSubmit}
-          isPending={isPending} // <-- ADICIONADO: Passa o estado de carregamento para o modal
           transactionId={transaction.id}
           assetInfo={{
             assetId: transaction.assetId,

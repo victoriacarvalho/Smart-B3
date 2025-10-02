@@ -1,9 +1,9 @@
-// app/calculation/_actions/DarfDocument.tsx
+// app/calculation/_components/DarfDocument.tsx
 
 import React from "react";
 import { Page, Text, View, Document, StyleSheet } from "@react-pdf/renderer";
 
-// Estilos para o PDF (sem alterações)
+// Estilos para o PDF (parecido com CSS-in-JS)
 const styles = StyleSheet.create({
   page: {
     padding: 30,
@@ -34,20 +34,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   field: {
-    width: "32%", // Ajustado para 3 colunas
+    width: "48%",
   },
 });
 
 interface DarfDocumentProps {
   userName: string;
   userCpf: string;
-  apuracao: string;
-  vencimento: string;
-  valorPrincipal: string;
+  apuracao: string; // Ex: "09/2025"
+  vencimento: string; // Ex: "31/10/2025"
+  valorPrincipal: string; // Ex: "150,75"
   codigoReceita: string;
-  generationDate: string; // NOVA PROPRIEDADE
 }
 
+// Este é o componente que define a estrutura do seu PDF
 export const DarfDocument = ({
   userName,
   userCpf,
@@ -55,7 +55,6 @@ export const DarfDocument = ({
   vencimento,
   valorPrincipal,
   codigoReceita,
-  generationDate, // NOVA PROPRIEDADE
 }: DarfDocumentProps) => (
   <Document>
     <Page size="A4" style={styles.page}>
@@ -73,21 +72,16 @@ export const DarfDocument = ({
             <Text style={styles.label}>02 - Período de Apuração</Text>
             <Text style={styles.value}>{apuracao}</Text>
           </View>
-          {/* CAMPO NOVO ADICIONADO AO PDF */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Data do Documento</Text>
-            <Text style={styles.value}>{generationDate}</Text>
-          </View>
         </View>
       </View>
 
       <View style={styles.section}>
         <View style={styles.row}>
-          <View style={styles.field} style={{ width: "48%" }}>
+          <View style={styles.field}>
             <Text style={styles.label}>03 - Número do CPF</Text>
             <Text style={styles.value}>{userCpf}</Text>
           </View>
-          <View style={styles.field} style={{ width: "48%" }}>
+          <View style={styles.field}>
             <Text style={styles.label}>04 - Código da Receita</Text>
             <Text style={styles.value}>{codigoReceita}</Text>
           </View>
@@ -96,11 +90,11 @@ export const DarfDocument = ({
 
       <View style={styles.section}>
         <View style={styles.row}>
-          <View style={styles.field} style={{ width: "48%" }}>
+          <View style={styles.field}>
             <Text style={styles.label}>06 - Data de Vencimento</Text>
             <Text style={styles.value}>{vencimento}</Text>
           </View>
-          <View style={styles.field} style={{ width: "48%" }}>
+          <View style={styles.field}>
             <Text style={styles.label}>07 - Valor Principal</Text>
             <Text style={styles.value}>R$ {valorPrincipal}</Text>
           </View>
@@ -109,11 +103,11 @@ export const DarfDocument = ({
 
       <View style={styles.section}>
         <View style={styles.row}>
-          <View style={styles.field} style={{ width: "48%" }}>
+          <View style={styles.field}>
             <Text style={styles.label}>08 - Valor da Multa</Text>
             <Text style={styles.value}>R$ 0,00</Text>
           </View>
-          <View style={styles.field} style={{ width: "48%" }}>
+          <View style={styles.field}>
             <Text style={styles.label}>09 - Valor dos Juros</Text>
             <Text style={styles.value}>R$ 0,00</Text>
           </View>

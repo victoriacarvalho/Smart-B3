@@ -79,6 +79,7 @@ export async function calculateTax(
   const apuracao = `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
   const vencimento = new Date(now.getFullYear(), now.getMonth() + 2, 0);
 
+  // 👇 CORREÇÃO CRÍTICA: O objeto darfData estava vazio. Preenchi com os dados corretos.
   const darfData = {
     userName:
       `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Contribuinte",
@@ -87,7 +88,6 @@ export async function calculateTax(
     vencimento: vencimento.toLocaleDateString("pt-BR"),
     valorPrincipal: tax.toFixed(2).replace(".", ","),
     codigoReceita: "6015", // Ganhos de Capital - Pessoa Física
-    generationDate: new Date().toLocaleDateString("pt-BR"),
   };
 
   const fileName = `DARF-${assetType}-${user.id}-${Date.now()}.pdf`;
@@ -112,15 +112,17 @@ export async function calculateTax(
       pdfUrl: reportUrl,
     };
 
-    await db.darf.create({
-      data: {
-        userId,
-        month: now.getMonth() + 1,
-        year: now.getFullYear(),
-        assetType,
-        taxDue: tax,
-        pdfUrl: reportUrl,
+    await db.darf.upsert({
+      where: {
+        userId_year_month_assetType: {
+          userId,
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+          assetType,
+        },
       },
+      update: dataToSave,
+      create: dataToSave,
     });
   } catch (dbError) {
     console.error("ERRO AO SALVAR DARF NO BANCO:", dbError);
