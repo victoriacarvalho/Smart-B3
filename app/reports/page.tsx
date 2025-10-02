@@ -1,3 +1,5 @@
+// app/reports/page.tsx
+
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/app/_lib/prisma";
@@ -33,7 +35,7 @@ export default async function ReportsPage() {
 
   const darfs = await db.darf.findMany({
     where: { userId },
-    orderBy: [{ year: "desc" }, { month: "desc" }],
+    orderBy: { createdAt: "desc" }, // Ordena pelos mais recentes primeiro
   });
 
   return (
@@ -49,6 +51,8 @@ export default async function ReportsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-gray-700 hover:bg-gray-800">
+                  <TableHead className="text-white">Gerado Em</TableHead>{" "}
+                  {/* NOVA COLUNA */}
                   <TableHead className="text-white">Competência</TableHead>
                   <TableHead className="text-white">Ativo</TableHead>
                   <TableHead className="text-right text-white">
@@ -67,6 +71,14 @@ export default async function ReportsPage() {
                       key={darf.id}
                       className="border-gray-700 hover:bg-gray-800"
                     >
+                      {/* CÉLULA COM A DATA DE GERAÇÃO */}
+                      <TableCell>
+                        {new Date(darf.createdAt).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
+                      </TableCell>
                       <TableCell>
                         {String(darf.month).padStart(2, "0")}/{darf.year}
                       </TableCell>
@@ -99,7 +111,7 @@ export default async function ReportsPage() {
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6} // Ajustado para 6 colunas
                       className="py-8 text-center text-gray-400"
                     >
                       Nenhum relatório de imposto foi gerado ainda.
