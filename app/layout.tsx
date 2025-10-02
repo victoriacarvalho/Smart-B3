@@ -1,11 +1,8 @@
-// app/layout.tsx
-
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/app/_components/ui/theme-provider"; // 1. IMporte o ThemeProvider
-
-const inter = Inter({ subsets: ["latin"] });
+import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
+import { Toaster } from "@/app/_components/ui/sonner"; // Importa o Toaster
 
 export const metadata: Metadata = {
   title: "Smart B3",
@@ -18,17 +15,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning> {/* Adicionar suppressHydrationWarning */}
+    <html lang="en" suppressHydrationWarning>
       <body className="dark">
-        {/* 2. ENVOLVA O CHILDREN COM O PROVIDER */}
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
+        <ClerkProvider
+          appearance={{
+            baseTheme: dark,
+          }}
         >
           {children}
-        </ThemeProvider>
+          <Toaster richColors />
+        </ClerkProvider>
       </body>
     </html>
   );

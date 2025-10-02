@@ -19,9 +19,25 @@ model User {
   whatsappConsent Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-
+  darfs Darf[]
   portfolios     Portfolio[]
   monthlyResults MonthlyResult[]
+}
+
+model Darf {
+  id          String    @id @default(cuid())
+  userId      String
+  month       Int       // Mês de apuração (ex: 9 para Setembro)
+  year        Int       // Ano de apuração (ex: 2025)
+  assetType   AssetType // ACAO, FII, ou CRIPTO
+  taxDue      Decimal   @db.Decimal(18, 8) // Valor do imposto a pagar
+  pdfUrl      String    // Caminho para o arquivo PDF gerado
+  isPaid      Boolean   @default(false) // Status para o usuário controlar
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month, assetType])
 }
 
 // ===============================================
@@ -67,7 +83,8 @@ model Transaction {
   fees      Decimal         @db.Decimal(18, 8) @default(0) // CORRIGIDO: Mudado para Decimal
   date      DateTime        // CORRIGIDO: Campo CRÍTICO da data da operação adicionado de volta
   createdAt DateTime        @default(now())
-  
+   operationType OperationType?
+  retentionPeriod RetentionPeriod?
   // REMOVIDO: Campos 'name', 'category', 'created' e 'uopdatedAt' por serem redundantes ou incorretos
 
   asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
@@ -110,4 +127,9 @@ enum TransactionType {
 enum OperationType {
   SWING_TRADE
   DAY_TRADE
+}
+
+enum RetentionPeriod {
+  CURTO_PRAZO
+  LONGO_PRAZO
 }
