@@ -56,7 +56,7 @@ const ProfitBarChart = ({ data }: ProfitBarChartProps) => {
         fill:
           item.profit >= 0
             ? `var(--color-${item.type})`
-            : "hsl(var(--destructive))",
+            : "hsl(var(--primary))",
       }))
     : [];
 
