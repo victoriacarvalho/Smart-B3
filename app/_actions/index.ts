@@ -140,7 +140,6 @@ export const deletePortfolio = async (params: z.infer<typeof idSchema>) => {
 export const findOrCreateAsset = async (params: {
   symbol: string;
   type: AssetType;
-  portfolioId: string;
 }) => {
   const { userId } = auth();
   if (!userId) throw new Error("Não autorizado.");
@@ -151,17 +150,30 @@ export const findOrCreateAsset = async (params: {
     update: {},
     create: {
       id: userId,
-      email: "",
+      email: "", // Pode ser preenchido em outro momento
       name: "",
     },
   });
 
-  const portfolioId = params.portfolioId;
+  // --- CORREÇÃO PRINCIPAL: BUSCA OU CRIA A CARTEIRA AQUI DENTRO ---
+  let portfolio = await db.portfolio.findFirst({
+    where: { userId: userId },
+  });
+
+  if (!portfolio) {
+    portfolio = await db.portfolio.create({
+      data: {
+        name: "Carteira Principal",
+        userId: userId,
+      },
+    });
+  }
+  // --- FIM DA CORREÇÃO ---
 
   const existingAsset = await db.asset.findUnique({
     where: {
       portfolioId_symbol: {
-        portfolioId: portfolioId,
+        portfolioId: portfolio.id, // Usa o ID da carteira encontrada/criada
         symbol: params.symbol,
       },
     },
@@ -180,7 +192,7 @@ export const findOrCreateAsset = async (params: {
 
   const newAsset = await db.asset.create({
     data: {
-      portfolioId: portfolioId,
+      portfolioId: portfolio.id, // Usa o ID da carteira encontrada/criada
       symbol: params.symbol,
       type: params.type,
       quantity: 0,
@@ -193,6 +205,113 @@ export const findOrCreateAsset = async (params: {
     quantity: Number(newAsset.quantity),
     averagePrice: Number(newAsset.averagePrice),
     targetPrice: newAsset.targetPrice ? Number(newAsset.targetPrice) : null,
+  };
+};
+
+async function sendWhatsappRequest(payload: object) {
+  const { WHATSAPP_API_TOKEN, WHATSAPP_PHONE_NUMBER_ID } = process.env;
+
+  if (!WHATSAPP_API_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+    throw new Error(
+      "As credenciais da API do WhatsApp não estão configuradas no .env",
+    );
+  }
+
+  const url = `https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${WHATSAPP_API_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Erro da API do WhatsApp:", errorData);
+    throw new Error(
+      `Falha ao enviar mensagem: ${errorData.error?.message || "Erro desconhecido"}`,
+    );
+  }
+
+  return response.json();
+}
+
+// Função exportada para ser usada na API do Cron Job
+export async function sendMonthlyNotification(
+  to: string,
+  name: string,
+  month: string,
+) {
+  console.log(`Preparando notificação mensal para ${name} (${to})`);
+  const payload = {
+    messaging_product: "whatsapp",
+    to: to.replace(/\D/g, ""),
+    type: "template",
+    template: {
+      name: "monthly_tax_report", // O nome do seu template
+      language: { code: "pt_BR" },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: name },
+            { type: "text", text: month },
+          ],
+        },
+      ],
+    },
+  };
+  await sendWhatsappRequest(payload);
+  console.log(`Notificação para ${name} enviada com sucesso.`);
+}
+
+// ===============================================
+// ACTION PARA ATIVAR NOTIFICAÇÕES
+// ===============================================
+const updateWhatsappInfoSchema = z.object({
+  name: z.string().trim().min(1, "O nome é obrigatório."),
+  phoneNumber: z.string().trim().min(1, "O número de telefone é obrigatório."),
+});
+
+export const updateUserWhatsappInfo = async (
+  params: z.infer<typeof updateWhatsappInfoSchema>,
+) => {
+  const { userId } = auth();
+  if (!userId) throw new Error("Não autorizado.");
+
+  const user = await clerkClient().users.getUser(userId);
+  if (!user) throw new Error("Usuário não encontrado.");
+
+  const { name, phoneNumber } = updateWhatsappInfoSchema.parse(params);
+
+  await db.user.upsert({
+    where: { id: userId },
+    update: { name, phoneNumber, whatsappConsent: true },
+    create: {
+      id: userId,
+      email: user.emailAddresses[0]?.emailAddress ?? "",
+      name,
+      phoneNumber,
+      whatsappConsent: true,
+    },
+  });
+
+  // Envia a mensagem de teste usando a função genérica
+  const testPayload = {
+    messaging_product: "whatsapp",
+    to: "5531996207676",
+    type: "template",
+    template: { name: "hello_world", language: { code: "en_US" } },
+  };
+  await sendWhatsappRequest(testPayload);
+
+  revalidatePath("/notifications");
+  return {
+    success: true,
+    message: "Informações salvas e mensagem de teste enviada!",
   };
 };
 
