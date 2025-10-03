@@ -76,7 +76,9 @@ const ProfitBarChart = ({ data }: ProfitBarChartProps) => {
                   tickLine={false}
                   tickMargin={10}
                   axisLine={false}
-                  tickFormatter={(value) => chartConfig[value]?.label || value}
+                  tickFormatter={(value: keyof typeof chartConfig) =>
+                    chartConfig[value]?.label || value
+                  }
                 />
                 <Tooltip
                   cursor={false}
