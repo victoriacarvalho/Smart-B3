@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { SearchIcon } from "lucide-react";
-import { AssetSearchDialog } from "./AssetSearchDialog";
+import { AssetSearchDialog } from "./assetSearchDialog";
 
 export function AssetSearchIcon() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
