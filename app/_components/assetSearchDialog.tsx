@@ -1,3 +1,4 @@
+// app/_components/assetSearchDialog.tsx
 "use client";
 
 import { useState } from "react";
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { ASSET_TYPE_OPTIONS } from "../_constants/transactions";
+import { toast } from "sonner";
 
 type SearchResult = {
   symbol: string;
@@ -48,8 +50,9 @@ export function AssetSearchDialog({
     setIsFindingAsset(true);
 
     try {
+      // A action agora não precisa mais do portfolioId
       const dbAsset = await findOrCreateAsset({
-        symbol: asset.apiId || asset.symbol,
+        symbol: asset.apiId || asset.symbol, // Usa apiId para cripto, symbol para outros
         type: selectedAssetType,
       });
 
@@ -59,6 +62,7 @@ export function AssetSearchDialog({
       }
     } catch (error) {
       console.error("Erro ao buscar ou criar o ativo:", error);
+      toast.error("Ocorreu um erro ao buscar o ativo.");
     } finally {
       setIsFindingAsset(false);
     }
