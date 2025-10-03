@@ -76,8 +76,6 @@ const ProfitBarChart = ({ data }: ProfitBarChartProps) => {
                   tickLine={false}
                   tickMargin={10}
                   axisLine={false}
-                  // --- CORREÇÃO AQUI ---
-                  // Adicionamos o tipo 'AssetType' para a variável 'value'
                   tickFormatter={(value: AssetType) =>
                     chartConfig[value]?.label || value
                   }
