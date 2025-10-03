@@ -1,0 +1,44 @@
+# Job 1: Focado em qualidade estática do código
+lint-and-format:
+  name: 1. Lint e Formatação Automática
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+        cache: "npm"
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Verificar formatação (Prettier)
+      run: npm run prettier:check
+
+    - name: Corrigir Linter (ESLint)
+     
+      run: npm run lint:fix
+
+    - name: Configurar Git
+      
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+    - name: Fazer Commit e Push das correções
+      
+      run: |
+        git add .
+        # Verifica se há algo para commitar antes de tentar
+        if ! git diff-index --quiet HEAD; then
+          git commit -m "chore(lint): corrige erros automáticos de linting ✨"
+          git push
+        else
+          echo "Nenhum arquivo de lint para corrigir."
+        fi

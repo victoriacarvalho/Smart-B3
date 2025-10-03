@@ -19,6 +19,7 @@ import {
   ASSET_TYPE_LABELS,
 } from "@/app/_constants/transactions";
 import AssetTypeIcon from "./asset-type-icon";
+import PercentageItem from "./percentagem-item"; // Importando o novo componente
 
 const chartConfig = {
   [AssetType.ACAO]: {
@@ -83,30 +84,15 @@ const AssetPieChart = ({ portfolioAllocation = [] }: AssetPieChartProps) => {
               </ResponsiveContainer>
             </ChartContainer>
 
-            <div className="mt-4 w-full space-y-3">
+            <div className="mt-4 w-full space-y-4">
               {chartData.map((item) => (
-                <div
+                <PercentageItem
                   key={item.type}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <AssetTypeIcon type={item.type} className="h-4 w-4" />
-                    <span className="font-medium">
-                      {chartConfig[item.type].label}
-                    </span>
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-bold">
-                      {new Intl.NumberFormat("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      }).format(item.value)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      ({((item.value / totalValue) * 100).toFixed(1)}%)
-                    </span>
-                  </div>
-                </div>
+                  icon={<AssetTypeIcon type={item.type} className="h-4 w-4" />}
+                  title={chartConfig[item.type].label}
+                  value={item.value}
+                  percentage={(item.value / totalValue) * 100}
+                />
               ))}
             </div>
           </>

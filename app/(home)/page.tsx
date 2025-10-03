@@ -6,8 +6,8 @@ import TimeSelect from "./_components/time-select";
 import SummaryCards from "./_components/summary-cards";
 import LastTransactionsCard from "./_components/last-transactions-card";
 import AssetPieChart from "./_components/asset-pie-chart";
+import AssetsDistribution from "./_components/assets-distribution"; // Importando o novo componente
 import { AddTransactionDialog } from "@/app/_components/add-transaction-dialog";
-import ProfitBarChart from "./_components/profit-bar-chart.tsx";
 
 interface HomeProps {
   searchParams: {
@@ -34,10 +34,8 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
     redirect(`/?year=${currentYear}&month=${currentMonth}`);
   }
 
-  // Adiciona tratamento de erro para a busca de dados
   const dashboardData = await getDashboard(year, month).catch((error) => {
     console.error("Falha ao carregar dados do dashboard:", error);
-    // Retorna um objeto com arrays vazios em caso de erro para evitar que a página quebre
     return {
       summary: {
         totalNetProfit: 0,
@@ -64,16 +62,25 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
           </div>
         </div>
 
+        {/* Layout de Grid Atualizado */}
         <div className="grid h-full grid-cols-1 gap-6 overflow-hidden lg:grid-cols-3">
+          {/* Coluna da Esquerda (2/3 da largura) */}
           <div className="flex flex-col gap-6 lg:col-span-2">
             <SummaryCards summary={dashboardData.summary} />
-            <ProfitBarChart data={dashboardData.profitByAssetType || []} />
+
+            {/* Nova linha para Gráfico de Pizza e Distribuição */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <AssetPieChart
+                portfolioAllocation={dashboardData.portfolioAllocation || []}
+              />
+              <AssetsDistribution
+                portfolioAllocation={dashboardData.portfolioAllocation || []}
+              />
+            </div>
           </div>
 
-          <div className="flex flex-col gap-6">
-            <AssetPieChart
-              portfolioAllocation={dashboardData.portfolioAllocation || []}
-            />
+          {/* Coluna da Direita (1/3 da largura) */}
+          <div className="flex flex-col">
             <LastTransactionsCard
               lastTransactions={dashboardData.lastTransactions || []}
             />
