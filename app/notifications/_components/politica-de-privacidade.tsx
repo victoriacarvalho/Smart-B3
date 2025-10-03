@@ -4,7 +4,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/app/_components/ui/accordion"; // O caminho para o seu componente de accordion
-import Navbar from "@/app/_components/navbar";
 
 export function PoliticaDePrivacidade() {
   const privacyItems = [

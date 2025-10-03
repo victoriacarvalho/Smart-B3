@@ -5,18 +5,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/app/_lib/prisma";
-import {
-  AssetType,
-  TransactionType,
-  OperationType,
-  RetentionPeriod,
-} from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
 
 // ===============================================
 // FUNÇÃO PARA ENVIAR WHATSAPP (COM DEBUG)
 // ===============================================
-async function sendTestWhatsappMessage(to: string, name: string) {
+async function sendTestWhatsappMessage(to: string) {
   const { WHATSAPP_API_TOKEN, WHATSAPP_PHONE_NUMBER_ID } = process.env;
 
   // -- LOGS PARA DEBUG --
@@ -82,7 +75,6 @@ async function sendTestWhatsappMessage(to: string, name: string) {
 // ===============================================
 // SCHEMAS E OUTRAS ACTIONS
 // ===============================================
-const idSchema = z.object({ id: z.string().cuid("ID inválido.") });
 const updateWhatsappInfoSchema = z.object({
   name: z.string().trim().min(1, "O nome é obrigatório."),
   phoneNumber: z.string().trim().min(1, "O número de telefone é obrigatório."),
@@ -169,7 +161,7 @@ export const updateUserWhatsappInfo = async (
   // Agora, a mensagem de teste será enviada para o número que o usuário digitou.
   // O número precisa estar sem máscara, apenas dígitos. Ex: 5531996207676
   const sanitizedPhoneNumber = phoneNumber.replace(/\D/g, "");
-  await sendTestWhatsappMessage(sanitizedPhoneNumber, name);
+  await sendTestWhatsappMessage(sanitizedPhoneNumber);
 
   revalidatePath("/notifications");
   return {

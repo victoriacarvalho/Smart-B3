@@ -326,7 +326,7 @@ export const upsertTransaction = async (
   if (!userId) throw new Error("Não autorizado.");
 
   const validatedParams = upsertTransactionSchema.parse(params);
-  const { assetType, ...dataForDb } = validatedParams;
+  const { ...dataForDb } = validatedParams;
 
   const asset = await db.asset.findUnique({
     where: { id: dataForDb.assetId },

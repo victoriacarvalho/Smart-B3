@@ -1,3 +1,4 @@
+// app/calculation/_actions/calculates-taxes.tsx
 "use server";
 
 import React from "react";
@@ -5,11 +6,9 @@ import { db } from "@/app/_lib/prisma";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { AssetType, TransactionType } from "@prisma/client";
-// CORREÇÃO 1: Usando caminho absoluto para o componente do documento
 import { DarfDocument } from "../_actions/DarfDocument";
 import ReactPDF from "@react-pdf/renderer";
-import fs from "fs/promises";
-import path from "path";
+import { put } from "@vercel/blob"; // Importa a função do Vercel Blob
 
 type ActionResult = {
   success: boolean;
@@ -22,7 +21,7 @@ export async function calculateTax(
   const { userId } = auth();
   if (!userId) redirect("/login");
 
-  // --- ETAPA 1: LÓGICA DE CÁLCULO (Sua lógica, que está correta) ---
+  // --- ETAPA 1: LÓGICA DE CÁLCULO (Sua lógica, mantida) ---
   const now = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -74,12 +73,11 @@ export async function calculateTax(
     };
   }
 
-  // --- ETAPA 2: GERAÇÃO DE PDF E SALVAMENTO NO BANCO ---
+  // --- ETAPA 2: GERAÇÃO DE PDF E UPLOAD PARA O BLOB ---
   const user = await clerkClient().users.getUser(userId);
   const apuracao = `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
   const vencimento = new Date(now.getFullYear(), now.getMonth() + 2, 0);
 
-  // 👇 CORREÇÃO CRÍTICA: O objeto darfData estava vazio. Preenchi com os dados corretos.
   const darfData = {
     userName:
       `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Contribuinte",
@@ -87,29 +85,31 @@ export async function calculateTax(
     apuracao,
     vencimento: vencimento.toLocaleDateString("pt-BR"),
     valorPrincipal: tax.toFixed(2).replace(".", ","),
-    codigoReceita: "6015", // Ganhos de Capital - Pessoa Física
+    codigoReceita: "6015",
   };
 
   const fileName = `DARF-${assetType}-${user.id}-${Date.now()}.pdf`;
-  const reportUrl = `/reports/${fileName}`;
-  const filePath = path.join(process.cwd(), "public", "reports", fileName);
 
   try {
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await ReactPDF.renderToFile(<DarfDocument {...darfData} />, filePath);
-  } catch (error) {
-    console.error("ERRO AO GERAR ARQUIVO PDF:", error);
-    return { success: false, message: "Falha ao gerar o arquivo PDF." };
-  }
+    // Gera o PDF em memória (como um buffer/stream)
+    const pdfStream = await ReactPDF.renderToStream(
+      <DarfDocument {...darfData} />,
+    );
 
-  try {
+    // Faz o upload do stream para o Vercel Blob
+    const blob = await put(fileName, pdfStream, {
+      access: "public",
+      contentType: "application/pdf",
+    });
+
+    // Salva a URL retornada pelo Vercel Blob no banco de dados
     const dataToSave = {
       userId,
       month: now.getMonth() + 1,
       year: now.getFullYear(),
       assetType,
       taxDue: tax,
-      pdfUrl: reportUrl,
+      pdfUrl: blob.url, // Usa a URL do Blob
     };
 
     await db.darf.upsert({
@@ -124,12 +124,9 @@ export async function calculateTax(
       update: dataToSave,
       create: dataToSave,
     });
-  } catch (dbError) {
-    console.error("ERRO AO SALVAR DARF NO BANCO:", dbError);
-    return {
-      success: false,
-      message: "PDF gerado, mas falhou ao salvar o registro no banco.",
-    };
+  } catch (error) {
+    console.error("ERRO AO GERAR/SALVAR DARF:", error);
+    return { success: false, message: "Falha ao gerar e salvar o PDF." };
   }
 
   return {
