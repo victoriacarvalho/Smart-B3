@@ -4,10 +4,9 @@ import { Button } from "@/app/_components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/app/_components/ui/card";
 import { ScrollArea } from "@/app/_components/ui/scroll-area";
 import Link from "next/link";
-import { TransactionType } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import AssetTypeIcon from "./asset-type-icon";
-import { Transaction } from "@prisma/client";
+import { AssetType, Transaction, TransactionType } from "@prisma/client";
 
 export type DashboardTransaction = Transaction & {
   asset: {
