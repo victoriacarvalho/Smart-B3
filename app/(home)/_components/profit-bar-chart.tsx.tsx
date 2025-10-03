@@ -1,3 +1,4 @@
+// app/(home)/_components/profit-bar-chart.tsx.tsx
 "use client";
 
 import {
@@ -49,14 +50,13 @@ interface ProfitBarChartProps {
 }
 
 const ProfitBarChart = ({ data }: ProfitBarChartProps) => {
-  // Garante que 'data' seja sempre um array antes de usar o 'map'
   const chartData = Array.isArray(data)
     ? data.map((item) => ({
         ...item,
         fill:
           item.profit >= 0
             ? `var(--color-${item.type})`
-            : "hsl(var(--primary))",
+            : "hsl(var(--destructive))", // Use a cor 'destructive' para prejuízo
       }))
     : [];
 
@@ -76,7 +76,11 @@ const ProfitBarChart = ({ data }: ProfitBarChartProps) => {
                   tickLine={false}
                   tickMargin={10}
                   axisLine={false}
-                  tickFormatter={(value) => chartConfig[value]?.label || value}
+                  // --- CORREÇÃO AQUI ---
+                  // Adicionamos o tipo 'AssetType' para a variável 'value'
+                  tickFormatter={(value: AssetType) =>
+                    chartConfig[value]?.label || value
+                  }
                 />
                 <Tooltip
                   cursor={false}
