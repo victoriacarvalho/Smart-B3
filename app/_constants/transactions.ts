@@ -76,7 +76,7 @@ export const RETENTION_PERIOD_OPTIONS = [
 ];
 
 export const ASSET_TYPE_COLORS: Record<AssetType, string> = {
-  ACAO: "hsl(var(--chart-1))", // Cor padrão 1 do ShadCN
-  FII: "hsl(var(--chart-2))", // Cor padrão 2 do ShadCN
-  CRIPTO: "hsl(var(--chart-3))", // Cor padrão 3 do ShadCN
+  ACAO: "hsl(var(--chart-1))",
+  FII: "hsl(var(--chart-2))",
+  CRIPTO: "hsl(var(--chart-3))",
 };
