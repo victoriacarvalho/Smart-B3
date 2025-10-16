@@ -50,6 +50,8 @@ const getSearchTermForAsset = (asset: Asset): string => {
  */
 
 async function analyzeArticleWithGemini(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   article: any,
   allAssets: Asset[],
 ): Promise<NewsAnalysis | null> {
