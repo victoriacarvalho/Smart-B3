@@ -12,20 +12,17 @@ interface NewsEntity {
   type: "EMPRESA" | "CONCEITO" | "PESSOA" | "SETOR";
 }
 
-// Define a análise completa de uma notícia
 export interface NewsAnalysis {
   headline: string;
   source: string;
   url: string;
   publishedAt: string;
-  summary: string; // Resumo gerado pelo Gemini
+  summary: string;
   sentiment: Sentiment;
-  impactedAssetSymbols: string[]; // Tickers dos ativos impactados
-  entities: NewsEntity[]; // Todas as entidades relevantes
-  relationships: string[]; // Relações em texto, ex: "Petrobras anuncia aumento de lucro"
+  impactedAssetSymbols: string[];
+  entities: NewsEntity[];
+  relationships: string[];
 }
-
-// --- Configuração das APIs ---
 
 const newsApiKey = process.env.NEWS_API_KEY;
 const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -37,11 +34,6 @@ if (!geminiApiKey) {
 const genAI = new GoogleGenerativeAI(geminiApiKey);
 const geminiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-// --- Funções Principais ---
-
-/**
- * Mapeia um ativo para um termo de busca mais eficaz.
- */
 const getSearchTermForAsset = (asset: Asset): string => {
   const customMappings: { [key: string]: string } = {
     MGLU3: "Magazine Luiza",
@@ -59,13 +51,15 @@ const getSearchTermForAsset = (asset: Asset): string => {
  * @param allAssets - A lista completa de ativos do usuário.
  * @returns A análise estruturada da notícia ou null em caso de falha.
  */
+
 async function analyzeArticleWithGemini(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   article: any,
   allAssets: Asset[],
 ): Promise<NewsAnalysis | null> {
   const assetSymbols = allAssets.map((a) => a.symbol.toUpperCase());
 
-  // O "prompt" é a instrução que damos ao Gemini.
   const prompt = `
     Analise o seguinte artigo de notícia e retorne um objeto JSON.
 
@@ -99,7 +93,6 @@ async function analyzeArticleWithGemini(
 
     const parsedJson = JSON.parse(jsonText);
 
-    // Combina os dados originais com a análise do Gemini
     return {
       headline: article.title,
       source: article.source.name,
@@ -129,7 +122,6 @@ export async function fetchAndAnalyzeNews(
     return [];
   }
 
-  // Pega os 3 ativos mais relevantes para focar a busca de notícias
   const searchTerms = [...new Set(assets.map(getSearchTermForAsset))].slice(
     0,
     3,
@@ -146,7 +138,7 @@ export async function fetchAndAnalyzeNews(
     const newsData = await newsResponse.json();
 
     // Analisa cada artigo com o Gemini em paralelo
-    const analysisPromises = newsData.articles.map((article: any) =>
+    const analysisPromises = newsData.articles.map((article: unknown) =>
       analyzeArticleWithGemini(article, assets),
     );
 
