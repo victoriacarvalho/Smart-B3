@@ -9,8 +9,8 @@ interface TransactionTypeBadgeProps {
 const TransactionTypeBadge = ({ transaction }: TransactionTypeBadgeProps) => {
   if (transaction.type === TransactionType.COMPRA) {
     return (
-      <Badge className="bg-muted font-bold text-primary hover:bg-muted">
-        <CircleIcon className="mr-2 fill-primary" size={10} />
+      <Badge className="bg-muted font-bold text-green-400 hover:bg-muted">
+        <CircleIcon className="mr-2 fill-green-400" size={10} />
         Compra
       </Badge>
     );

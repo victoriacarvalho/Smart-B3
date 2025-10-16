@@ -11,6 +11,7 @@ import {
 } from "@/app/_constants/transactions";
 import Link from "next/link";
 import { TransactionActions } from "@/app/_components/transactions-actions";
+import TransactionTypeBadge from "../_components/type-badge";
 
 export type TransactionColumnData = Transaction & {
   asset: {
@@ -38,7 +39,7 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
       return (
         <Link
           href={`/investment/${assetId}`}
-          className="font-medium text-primary underline-offset-4 hover:underline"
+          className="font-medium underline-offset-4 hover:underline"
         >
           {asset.symbol.toUpperCase()}
         </Link>
@@ -48,12 +49,9 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
   {
     accessorKey: "type",
     header: "Tipo",
-    cell: ({ row }) => {
-      const type = row.original.type;
-      const label = TRANSACTION_TYPE_LABELS[type];
-      const color = type === "COMPRA" ? "text-green-600" : "text-red-600";
-      return <span className={`font-semibold ${color}`}>{label}</span>;
-    },
+    cell: ({ row: { original: transaction } }) => (
+      <TransactionTypeBadge transaction={transaction} />
+    ),
   },
   {
     accessorKey: "date",
@@ -102,7 +100,6 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
       return <span className="text-muted-foreground">-</span>;
     },
   },
-  // Coluna de AÇÕES (EDITAR / DELETAR)
   {
     id: "actions",
     header: () => <div className="text-right">Ações</div>,
