@@ -7,7 +7,6 @@ import { ArrowUpDown } from "lucide-react";
 import {
   OPERATION_TYPE_LABELS,
   RETENTION_PERIOD_LABELS,
-  TRANSACTION_TYPE_LABELS,
 } from "@/app/_constants/transactions";
 import Link from "next/link";
 import { TransactionActions } from "@/app/_components/transactions-actions";
