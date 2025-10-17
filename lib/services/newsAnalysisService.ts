@@ -1,10 +1,20 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Asset } from "@prisma/client";
+import axios from "axios";
+import cheerio from "cheerio";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Asset } from "@prisma/client";
 
-type Sentiment = "Positivo" | "Negativo" | "Neutro";
+const NEWS_API_KEY = process.env.NEWS_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-interface NewsEntity {
+if (!NEWS_API_KEY) throw new Error("NEWS_API_KEY is not configured");
+if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
+
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+export type Sentiment = "Positivo" | "Negativo" | "Neutro";
+
+export interface NewsEntity {
   name: string;
   type: "EMPRESA" | "CONCEITO" | "PESSOA" | "SETOR";
 }
@@ -21,64 +31,82 @@ export interface NewsAnalysis {
   relationships: string[];
 }
 
-const newsApiKey = process.env.NEWS_API_KEY;
-const geminiApiKey = process.env.GEMINI_API_KEY;
-
-if (!geminiApiKey) {
-  throw new Error("GEMINI_API_KEY is not configured in .env file");
-}
-
-const genAI = new GoogleGenerativeAI(geminiApiKey);
-const geminiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-const getSearchTermForAsset = (asset: Asset): string => {
-  const customMappings: { [key: string]: string } = {
-    MGLU3: "Magazine Luiza",
-    PETR4: "Petrobras",
-    ITSA4: "Itaúsa",
-    BTC: "Bitcoin",
-    ETH: "Ethereum",
-  };
-  return customMappings[asset.symbol.toUpperCase()] || asset.name;
+const customMappings: Record<string, string> = {
+  MGLU3: "Magazine Luiza",
+  PETR4: "Petrobras",
+  ITSA4: "Itaúsa",
+  BTC: "Bitcoin",
+  ETH: "Ethereum",
 };
 
+function getSearchTermForAsset(asset: Asset): string {
+  return customMappings[asset.symbol.toUpperCase()] || asset.name;
+}
+
 /**
- * Analisa um único artigo de notícia usando o Gemini.
- * @param article - O artigo bruto da NewsAPI.
- * @param allAssets - A lista completa de ativos do usuário.
- * @returns A análise estruturada da notícia ou null em caso de falha.
+ * Scraping simples para buscar texto extra do artigo.
  */
+export async function scrapeArticleText(url: string): Promise<string | null> {
+  try {
+    const { data } = await axios.get(url);
+    const $ = cheerio.load(data);
+    const paragraphs = $("p")
+      .map((_, el) => $(el).text())
+      .get();
+    return paragraphs.join(" ");
+  } catch (err) {
+    console.warn(`Failed to scrape article text for ${url}`, err);
+    return null;
+  }
+}
 
-async function analyzeArticleWithGemini(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+/**
+ * Busca notícias na NewsAPI por múltiplos termos
+ */
+export async function fetchNewsFromNewsAPI(assets: Asset[]) {
+  const terms = [...new Set(assets.map(getSearchTermForAsset))].slice(0, 3);
+  const query = terms.join(" OR ");
 
+  const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=pt&pageSize=5&sortBy=publishedAt&apiKey=${NEWS_API_KEY}`;
+
+  try {
+    const res = await axios.get(url);
+    return res.data.articles || [];
+  } catch (error) {
+    console.error("Error fetching news from NewsAPI:", error);
+    return [];
+  }
+}
+
+/**
+ * Usa Gemini para analisar artigo e extrair entidades, sentimento, etc.
+ */
+export async function analyzeArticleWithGemini(
   article: any,
   allAssets: Asset[],
 ): Promise<NewsAnalysis | null> {
   const assetSymbols = allAssets.map((a) => a.symbol.toUpperCase());
 
   const prompt = `
-    Analise o seguinte artigo de notícia e retorne um objeto JSON.
+Analise o seguinte artigo de notícia e retorne um objeto JSON.
 
-    Artigo:
-    - Título: "${article.title}"
-    - Conteúdo: "${article.description || article.content || ""}"
+Artigo:
+- Título: "${article.title}"
+- Conteúdo: "${article.description || article.content || ""}"
 
-    Siga estritamente o seguinte formato JSON e preencha todos os campos:
-    {
-      "summary": "Um resumo conciso do artigo em português em no máximo 2 frases.",
-      "sentiment": "O sentimento geral da notícia em relação ao mercado financeiro. Use apenas um dos seguintes valores: 'Positivo', 'Negativo' ou 'Neutro'.",
-      "impactedAssetSymbols": ["Uma lista de tickers de ativos da lista [${assetSymbols.join(
-        ", ",
-      )}] que são diretamente ou indiretamente impactados por esta notícia. Se nenhum for impactado, retorne um array vazio."],
-      "entities": [
-        { "name": "Nome da entidade principal (empresa, conceito, pessoa)", "type": "Tipo da entidade (use EMPRESA, CONCEITO, PESSOA ou SETOR)" }
-      ],
-      "relationships": [
-        "Descreva a principal relação ou evento em uma frase curta. Ex: 'Petrobras anuncia aumento de lucro de 10%'."
-      ]
-    }
-  `;
+Siga estritamente o seguinte formato JSON e preencha todos os campos:
+{
+  "summary": "Um resumo conciso do artigo em português em no máximo 2 frases.",
+  "sentiment": "O sentimento geral da notícia em relação ao mercado financeiro. Use apenas um dos seguintes valores: 'Positivo', 'Negativo' ou 'Neutro'.",
+  "impactedAssetSymbols": ["Uma lista de tickers de ativos da lista [${assetSymbols.join(", ")}] que são diretamente ou indiretamente impactados por esta notícia. Se nenhum for impactado, retorne um array vazio."],
+  "entities": [
+    { "name": "Nome da entidade principal (empresa, conceito, pessoa)", "type": "Tipo da entidade (use EMPRESA, CONCEITO, PESSOA ou SETOR)" }
+  ],
+  "relationships": [
+    "Descreva a principal relação ou evento em uma frase curta. Ex: 'Petrobras anuncia aumento de lucro de 10%'."
+  ]
+}
+`;
 
   try {
     const result = await geminiModel.generateContent(prompt);
@@ -88,14 +116,14 @@ async function analyzeArticleWithGemini(
       .replace(/```json|```/g, "")
       .trim();
 
-    const parsedJson = JSON.parse(jsonText);
+    const parsed = JSON.parse(jsonText);
 
     return {
       headline: article.title,
       source: article.source.name,
       url: article.url,
       publishedAt: article.publishedAt,
-      ...parsedJson,
+      ...parsed,
     };
   } catch (error) {
     console.error(
@@ -107,44 +135,24 @@ async function analyzeArticleWithGemini(
 }
 
 /**
- * Busca e analisa notícias relevantes para a carteira de um usuário.
- * @param assets - A lista de ativos da carteira.
- * @returns Uma lista de análises de notícias.
+ * Função principal: busca notícias e faz análises com Gemini
  */
 export async function fetchAndAnalyzeNews(
   assets: Asset[],
 ): Promise<NewsAnalysis[]> {
-  if (!newsApiKey) {
-    console.error("News API key is not configured.");
-    return [];
-  }
+  const rawArticles = await fetchNewsFromNewsAPI(assets);
 
-  const searchTerms = [...new Set(assets.map(getSearchTermForAsset))].slice(
-    0,
-    3,
-  );
-  const query = searchTerms.join(" OR ");
-  const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=pt&sortBy=publishedAt&pageSize=5&apiKey=${newsApiKey}`;
-
-  try {
-    const newsResponse = await fetch(url);
-    if (!newsResponse.ok) {
-      console.error("Failed to fetch from NewsAPI:", newsResponse.statusText);
-      return [];
+  // Adicionar scraping do conteúdo para melhorar análise (opcional)
+  for (const article of rawArticles) {
+    if (!article.content) {
+      article.content = await scrapeArticleText(article.url);
     }
-    const newsData = await newsResponse.json();
-
-    // Analisa cada artigo com o Gemini em paralelo
-    const analysisPromises = newsData.articles.map((article: unknown) =>
-      analyzeArticleWithGemini(article, assets),
-    );
-
-    const analyses = await Promise.all(analysisPromises);
-
-    // Filtra qualquer análise que tenha falhado (retornou null)
-    return analyses.filter((a): a is NewsAnalysis => a !== null);
-  } catch (error) {
-    console.error("Error fetching or processing news:", error);
-    return [];
   }
+
+  // Analisar com Gemini em paralelo
+  const analyses = await Promise.all(
+    rawArticles.map((article) => analyzeArticleWithGemini(article, assets)),
+  );
+
+  return analyses.filter((a): a is NewsAnalysis => a !== null);
 }
