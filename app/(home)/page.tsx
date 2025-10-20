@@ -1,6 +1,5 @@
 import { AddTransactionDialog } from "../_components/add-transaction-button";
 import Navbar from "../_components/navbar";
-import AiReportButton from "./_components/ai-report-button";
 
 const DashboardPage = async () => {
   return (
