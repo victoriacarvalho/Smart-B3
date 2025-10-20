@@ -1,4 +1,3 @@
-// src/lib/services/marketDataService.ts
 import { AssetPriceData, AssetTypeForAPI } from "@/lib/types";
 import { fetchCryptoPrice } from "./api/coingecko";
 import { fetchStockOrFiiPrice } from "./api/brapi";
@@ -22,7 +21,7 @@ export async function getAssetPrice(
   }
 
   console.log(`CACHE MISS for ${cacheKey}`);
-  let fetchedData: AssetPriceData;
+  let fetchedData: AssetPriceData | null = null;
 
   try {
     switch (type) {
@@ -35,6 +34,11 @@ export async function getAssetPrice(
         break;
       default:
         throw new Error(`Unsupported asset type: ${type}`);
+    }
+
+    if (!fetchedData) {
+      // Se não foi possível obter dados, retorne null sem cachear
+      return null;
     }
 
     cache.set(cacheKey, { data: fetchedData, timestamp: Date.now() });

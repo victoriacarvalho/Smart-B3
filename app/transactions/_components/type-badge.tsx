@@ -17,8 +17,8 @@ const TransactionTypeBadge = ({ transaction }: TransactionTypeBadgeProps) => {
   }
   if (transaction.type === TransactionType.VENDA) {
     return (
-      <Badge className="font bold bg-danger text-danger bg-opacity-10">
-        <CircleIcon className="fill-danger mr-2" size={10} />
+      <Badge className="bg-muted font-bold text-red-500 hover:bg-muted">
+        <CircleIcon className="mr-2 fill-red-500" size={10} />
         Venda
       </Badge>
     );

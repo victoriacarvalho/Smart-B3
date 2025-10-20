@@ -14,7 +14,6 @@ import {
 } from "./ui/dialog";
 
 import { ASSET_TYPE_OPTIONS } from "../_constants/transactions";
-import UpsertTransactionDialog from "./upsert-operation-dialog";
 import { findOrCreateAsset, upsertTransaction } from "../_actions";
 import {
   Select,
@@ -24,6 +23,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { AssetSearch } from "./asset-search";
+import UpsertOperationDialog from "./upsert-operation-dialog";
 
 type SearchResult = {
   symbol: string;
@@ -192,7 +192,7 @@ export function AddTransactionDialog() {
       </Dialog>
 
       {isUpsertOpen && activeAsset && selectedAssetType && (
-        <UpsertTransactionDialog
+        <UpsertOperationDialog
           isOpen={isUpsertOpen}
           setIsOpen={setIsUpsertOpen}
           onSubmit={handleSubmitTransaction}
@@ -201,7 +201,6 @@ export function AddTransactionDialog() {
             symbol: activeAsset.symbol,
             name: activeAsset.name,
             type: activeAsset.type,
-            apiId: activeAsset.apiId,
           }}
         />
       )}

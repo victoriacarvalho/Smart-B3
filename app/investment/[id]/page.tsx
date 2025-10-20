@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/app/_components/ui/card";
 import { ScrollArea } from "@/app/_components/ui/scroll-area";
-import { AssetType } from "@prisma/client"; // Importe o tipo
 import { AddTransactionDialog } from "@/app/_components/add-transaction-button";
 import AssetRealTimeInfo from "../_component/asset-real-time-info";
 
@@ -65,15 +64,7 @@ const InvestmentPage = async ({ params }: { params: { id: string } }) => {
             <p className="text-sm text-muted-foreground">{asset.type}</p>
           </div>
 
-          <AddTransactionDialog
-            assetInfo={{
-              assetId: asset.id,
-              symbol: asset.symbol,
-              name: asset.name,
-              type: asset.type as AssetType,
-              apiId: asset.apiId,
-            }}
-          />
+          <AddTransactionDialog />
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
