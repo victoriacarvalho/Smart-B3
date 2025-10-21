@@ -5,7 +5,6 @@ import TimeSelect from "./_components/time-select";
 import SummaryCards from "./_components/summary-cards";
 import LastTransactionsCard from "./_components/last-transactions-card";
 import { ScrollArea } from "@/app/_components/ui/scroll-area";
-import ProfitBarChart from "./_components/profit-bar-chart";
 import { getDashboard } from "../_data/get-dashboard";
 import { AddTransactionDialog } from "../_components/add-transaction-button";
 import AssetPieChart from "./_components/asset-pie-chart";
@@ -69,7 +68,6 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
             <div className="flex flex-col gap-6 pr-6">
               {" "}
               <SummaryCards summary={dashboardData.summary} />
-              <ProfitBarChart data={dashboardData.profitByAssetType || []} />
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <AssetPieChart
                   portfolioAllocation={dashboardData.portfolioAllocation || []}

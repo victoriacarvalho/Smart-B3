@@ -124,7 +124,6 @@ export const getDashboard = async (
     {} as Record<AssetType, Decimal>,
   );
 
-  // Busca as últimas transações
   const lastTransactionsFromDb = await db.transaction.findMany({
     where: { asset: { portfolio: { userId } } },
     include: { asset: { select: { symbol: true, type: true } } },
@@ -132,7 +131,6 @@ export const getDashboard = async (
     take: 5,
   });
 
-  // Converte Decimals para Numbers antes de retornar
   const lastTransactions = lastTransactionsFromDb.map(serializeTransaction);
 
   return {

@@ -2,7 +2,6 @@ import {
   PiggyBank,
   TrendingDown,
   TrendingUp,
-  FileText,
   CircleDollarSign,
   Wallet,
 } from "lucide-react";
@@ -49,17 +48,13 @@ const SummaryCards = ({ summary }: SummaryCardsProps) => {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <SummaryCard
           icon={<PiggyBank className="h-5 w-5" />}
           title="Custo Total Investido"
           amount={summary.totalInvestedCost}
         />
-        <SummaryCard
-          icon={<FileText className="h-5 w-5" />}
-          title="Imposto Devido no Mês"
-          amount={summary.totalTaxDue}
-        />
+
         <SummaryCard
           icon={<CircleDollarSign className="h-5 w-5" />}
           title="Total Vendido no Mês"

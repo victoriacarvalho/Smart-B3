@@ -130,7 +130,6 @@ export async function getDashboardData(month: string) {
         fees: t.fees.toNumber(),
         assetId: t.assetId,
 
-        // Seus dados extras
         asset: { symbol: a.symbol, type: a.type },
       })),
     )

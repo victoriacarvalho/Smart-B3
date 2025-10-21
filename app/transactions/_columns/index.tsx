@@ -58,8 +58,8 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
     cell: ({ row }) => new Date(row.original.date).toLocaleDateString("pt-BR"),
   },
   {
-    accessorKey: "value",
-    header: "Valor",
+    accessorKey: "quantity",
+    header: "Quantidade",
     cell: ({ row }) => Number(row.original.quantity).toLocaleString("pt-BR"),
   },
   {
