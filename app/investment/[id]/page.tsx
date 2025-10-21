@@ -49,8 +49,6 @@ const InvestmentPage = async ({ params }: { params: { id: string } }) => {
     );
   }
 
-  const totalInvested =
-    asset.quantity.toNumber() * asset.averagePrice.toNumber();
   const totalQuantity = asset.quantity.toNumber();
 
   return (

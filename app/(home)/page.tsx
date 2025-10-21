@@ -55,8 +55,8 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
     <>
       <Navbar />
       <div className="flex h-full flex-col space-y-6 overflow-hidden p-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div className="flex items-center justify-end lg:justify-between">
+          <h1 className="hidden text-2xl font-bold lg:block">Dashboard</h1>
           <div className="flex items-center gap-4">
             <AddTransactionDialog />
             <TimeSelect />
@@ -78,8 +78,7 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
               </div>
             </div>
           </ScrollArea>
-
-          <div className="flex flex-col">
+          <div className="hidden flex-col lg:flex">
             <LastTransactionsCard
               lastTransactions={dashboardData.lastTransactions || []}
             />
