@@ -106,7 +106,7 @@ const InvestmentPage = async ({ params }: { params: { id: string } }) => {
                 asset.transactions.map((tx) => (
                   <div
                     key={tx.id}
-                    className="mb-4 flex items-center justify-between border-b pb-4 last:mb-0 last:border-b-0 last:pb-0"
+                    className="mb-4 flex flex-col items-start gap-1 border-b pb-4 last:mb-0 last:border-b-0 last:pb-0 md:flex-row md:items-center md:justify-between"
                   >
                     <div>
                       <p
@@ -123,10 +123,10 @@ const InvestmentPage = async ({ params }: { params: { id: string } }) => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-right font-semibold">
+                      <p className="text-left font-semibold md:text-right">
                         {tx.quantity.toNumber().toLocaleString("pt-BR")}
                       </p>
-                      <p className="text-right text-sm text-muted-foreground">
+                      <p className="text-left text-sm text-muted-foreground md:text-right">
                         {new Intl.NumberFormat("pt-BR", {
                           style: "currency",
                           currency: "BRL",
