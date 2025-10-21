@@ -10,22 +10,22 @@ export function PoliticaDePrivacidade() {
     {
       title: "1. Introdução",
       content:
-        "Esta Política de Privacidade descreve como coletamos, usamos e protegemos suas informações ao adquirir e utilizar nosso curso sobre APIs de WhatsApp.",
+        "Esta Política de Privacidade descreve como coletamos, usamos e protegemos suas informações ao ativar notificações de WhatsApp.",
     },
     {
       title: "2. Coleta de Informações",
       content:
-        "Coletamos informações pessoais fornecidas por você ao se inscrever no curso, como nome, e-mail e dados de pagamento.",
+        "Coletamos informações pessoais fornecidas por você ao se inscrever no sistema, como nome, e-mail e telefone.",
     },
     {
       title: "3. Uso das Informações",
       content:
-        "Usamos suas informações para fornecer acesso ao curso, processar pagamentos e comunicar atualizações e informações relevantes sobre o curso.",
+        "Usamos suas informações para fornecer acesso ao sistema, processar informações de seus investimentos e comunicar atualizações e informações relevantes.",
     },
     {
       title: "4. Compartilhamento de Informações",
       content:
-        "Não compartilhamos suas informações pessoais com terceiros, exceto conforme necessário para processar pagamentos ou conforme exigido por lei.",
+        "Não compartilhamos suas informações pessoais com terceiros, exceto conforme necessário para processar notificações ou conforme exigido por lei.",
     },
     {
       title: "5. Segurança das Informações",
@@ -40,22 +40,7 @@ export function PoliticaDePrivacidade() {
     {
       title: "7. Encerramento do Serviço",
       content:
-        "Podemos encerrar o fornecimento do curso e seus serviços a qualquer momento, sem prejuízo para nossa parte.",
-    },
-    {
-      title: "8. Vigência e Acesso",
-      content:
-        "A assinatura do curso garante acesso ao conteúdo durante sua vigência. Após o término da assinatura, o acesso será encerrado.",
-    },
-    {
-      title: "9. Responsabilidade do Usuário",
-      content:
-        "O usuário é responsável pelo uso do conhecimento adquirido no curso e por qualquer software desenvolvido com base nesse conhecimento. Não nos responsabilizamos por quaisquer problemas decorrentes do uso do conteúdo ensinado.",
-    },
-    {
-      title: "10. Contato",
-      content:
-        "Para dúvidas ou mais informações sobre esta Política de Privacidade, entre em contato conosco através dos canais fornecidos.",
+        "Podemos encerrar o fornecimento do sistema e seus serviços a qualquer momento, sem prejuízo para nossa parte.",
     },
   ];
 
