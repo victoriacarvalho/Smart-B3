@@ -10,6 +10,7 @@ import ReactPDF from "@react-pdf/renderer";
 import { put } from "@vercel/blob";
 import { Prisma } from "@prisma/client";
 import { DarfDocument } from "./darf-document";
+import { Readable } from "stream";
 
 type ActionResult = {
   success: boolean;
@@ -254,7 +255,9 @@ export async function calculateTax(
       <DarfDocument {...darfData} />,
     );
 
-    const blob = await put(fileName, pdfStream, {
+    const nodeStream = Readable.fromWeb(pdfStream as never);
+
+    const blob = await put(fileName, nodeStream, {
       access: "public",
       contentType: "application/pdf",
     });
