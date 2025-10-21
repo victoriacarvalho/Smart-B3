@@ -7,39 +7,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ===============================================
-// MODELOS DE AUTENTICAÇÃO E USUÁRIO (INTEGRADO COM CLERK E WHATSAPP)
-// ===============================================
 model User {
-  id              String    @id
-  email           String    @unique
+  id              String          @id
+  email           String          @unique
   name            String?
   imageUrl        String?
-  phoneNumber     String?   @unique
-  whatsappConsent Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  darfs Darf[]
-  portfolios     Portfolio[]
-  monthlyResults MonthlyResult[]
+  phoneNumber     String?         @unique
+  whatsappConsent Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  darfs           Darf[]
+  portfolios      Portfolio[]
+  monthlyResults  MonthlyResult[]
+  accumulatedLosses AccumulatedLoss[]
 }
 
 model Darf {
-  id          String    @id @default(cuid())
-  userId      String
-  month       Int       
-  year        Int       
-  assetType   AssetType 
-  taxDue      Decimal   @db.Decimal(18, 8) 
-  pdfUrl      String    
-  isPaid      Boolean   @default(false) 
-  createdAt   DateTime  @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  month     Int
+  year      Int
+  assetType AssetType
+  taxDue    Decimal   @db.Decimal(18, 8)
+  pdfUrl    String
+  codigoReceita String?
+  isPaid    Boolean   @default(false)
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, year, month, assetType])
 }
-
 
 model Portfolio {
   id        String   @id @default(cuid())
@@ -59,12 +57,12 @@ model Asset {
   portfolioId  String
   symbol       String
   type         AssetType
-  quantity     Decimal   @db.Decimal(18, 8) 
-  averagePrice Decimal   @db.Decimal(18, 8) 
-  targetPrice  Decimal?  @db.Decimal(18, 8) 
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  quantity     Decimal   @db.Decimal(18, 8)
+  averagePrice Decimal   @db.Decimal(18, 8)
+  targetPrice  Decimal?  @db.Decimal(18, 8)
+  isForeign    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   portfolio    Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   transactions Transaction[]
@@ -72,16 +70,32 @@ model Asset {
   @@unique([portfolioId, symbol])
 }
 
+model AccumulatedLoss {
+  id            String   @id @default(cuid())
+  userId        String
+  year          Int
+  month         Int
+  operationType String
+  amount        Decimal  @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month, operationType])
+  @@index([userId, year, month])
+}
+
 model Transaction {
-  id        String          @id @default(cuid())
-  assetId   String
-  type      TransactionType
-  quantity  Decimal         @db.Decimal(18, 8) 
-  unitPrice Decimal         @db.Decimal(18, 8) 
-  fees      Decimal         @db.Decimal(18, 8) @default(0) 
-  date      DateTime        
-  createdAt DateTime        @default(now())
-   operationType OperationType?
+  id              String           @id @default(cuid())
+  assetId         String
+  type            TransactionType
+  quantity        Decimal          @db.Decimal(18, 8)
+  unitPrice       Decimal          @db.Decimal(18, 8)
+  fees            Decimal          @default(0) @db.Decimal(18, 8)
+  isDayTrade      Boolean          @default(false)
+  date            DateTime
+  createdAt       DateTime         @default(now())
+  operationType   OperationType?
   retentionPeriod RetentionPeriod?
 
   asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
@@ -94,11 +108,11 @@ model MonthlyResult {
   year               Int
   assetType          AssetType
   operationType      OperationType
-  totalSold          Decimal       @db.Decimal(18, 8) @default(0) 
-  netProfit          Decimal       @db.Decimal(18, 8) @default(0) 
-  accumulatedLoss    Decimal       @db.Decimal(18, 8) @default(0) 
-  taxBase            Decimal       @db.Decimal(18, 8) @default(0) 
-  taxDue             Decimal       @db.Decimal(18, 8) @default(0) 
+  totalSold          Decimal       @default(0) @db.Decimal(18, 8)
+  netProfit          Decimal       @default(0) @db.Decimal(18, 8)
+  accumulatedLoss    Decimal       @default(0) @db.Decimal(18, 8)
+  taxBase            Decimal       @default(0) @db.Decimal(18, 8)
+  taxDue             Decimal       @default(0) @db.Decimal(18, 8)
   isPaid             Boolean       @default(false)
   notificationSentAt DateTime?
 
@@ -106,7 +120,6 @@ model MonthlyResult {
 
   @@unique([userId, year, month, assetType, operationType])
 }
-
 
 enum AssetType {
   ACAO
