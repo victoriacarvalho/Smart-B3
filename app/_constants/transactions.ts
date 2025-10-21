@@ -76,7 +76,7 @@ export const RETENTION_PERIOD_OPTIONS = [
 ];
 
 export const ASSET_TYPE_COLORS: Record<AssetType, string> = {
-  ACAO: "hsl(var(--chart-1))",
-  FII: "hsl(var(--chart-2))",
-  CRIPTO: "hsl(var(--chart-3))",
+  ACAO: "hsl(142.1 76.2% 36.3%)",
+  FII: "hsl(0 84.2% 60.2%)",
+  CRIPTO: "hsl(0 0% 95%)",
 };
