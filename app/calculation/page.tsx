@@ -23,8 +23,12 @@ const SubscriptionPage = async () => {
       <div className="space-y-6 p-6">
         <h1 className="text-2xl font-bold">Cálculo de impostos</h1>
 
-        <div className="flex justify-center gap-6">
-          <Card className="flex w-[550px] w-full max-w-sm flex-col justify-between">
+        {/* ALTERAÇÃO AQUI: Trocado 'lg:items-start' por 'lg:items-stretch'
+          para forçar a mesma altura em todos os cards no desktop.
+        */}
+        <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-stretch lg:justify-center">
+          {/* Card 1: Criptomoeda (Conteúdo Corrigido) */}
+          <Card className="flex w-full max-w-sm flex-col justify-between">
             <div>
               <CardHeader className="mb-4 border-b border-solid py-8 text-center">
                 {" "}
@@ -39,15 +43,24 @@ const SubscriptionPage = async () => {
               <CardContent className="space-y-4 text-sm">
                 <div className="flex items-start gap-3">
                   <CheckIcon className="text-primary" />{" "}
-                  <p>Isenção para lucros até R$ 35.000</p>
+                  <p>
+                    Isenção se o total de <b>VENDAS</b> no mês for inferior a R$
+                    35.000 (em corretoras BR).
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckIcon className="text-primary" />
+                  <p>
+                    Ativos no exterior são tributados em 15% sobre o lucro, sem
+                    isenção mensal.
+                  </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <XIcon className="mt-1 h-4 w-4 flex-shrink-0" />
-                  <p>Tributação p/ lucros acima de R$ 35.000</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <XIcon className="mt-1 h-4 w-4 flex-shrink-0" />
-                  <p>Considerando lucros MENSAIS</p>
+                  <p>
+                    Tributação de 15% se <b>VENDAS</b> no mês ultrapassarem R$
+                    35.000 (em corretoras BR).
+                  </p>
                 </div>
               </CardContent>
             </div>
@@ -56,7 +69,7 @@ const SubscriptionPage = async () => {
             </CardFooter>
           </Card>
 
-          {/* Card 2: Ação */}
+          {/* Card 2: Ação (Conteúdo OK) */}
           <Card className="flex w-full max-w-sm flex-col justify-between">
             <div>
               <CardHeader className="mb-4 border-b border-solid py-8 text-center">
@@ -86,7 +99,7 @@ const SubscriptionPage = async () => {
             </CardFooter>
           </Card>
 
-          {/* Card 3: Fundos Imobiliários */}
+          {/* Card 3: Fundos Imobiliários (Conteúdo Corrigido) */}
           <Card className="flex w-full max-w-sm flex-col justify-between">
             <div>
               <CardHeader className="mb-4 border-b border-solid py-8 text-center">
@@ -94,20 +107,27 @@ const SubscriptionPage = async () => {
                   Cálculo de Fundos Imobiliários
                 </h2>
                 <div className="mt-4">
-                  <span className="text-6xl font-bold">15%</span>
+                  <span className="text-6xl font-bold">20%</span>
                   <span className="ml-1 text-2xl text-gray-400">/lucro</span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
                 <div className="flex items-start gap-3">
-                  <XIcon className="mt-1 h-4 w-4 flex-shrink-0" />
-                  <p>Fundos de ações: 15% sobre o lucro no resgate.</p>
+                  <CheckIcon className="text-primary" />
+                  <p>
+                    20% sobre o lucro na <b>Venda</b> (Swing Trade ou Day
+                    Trade).
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckIcon className="text-primary" />
+                  <p>Rendimentos (aluguéis) mensais são isentos de IR.</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <XIcon className="mt-1 h-4 w-4 flex-shrink-0" />
                   <p>
-                    Fundos de renda fixa multimercado usam tabela regressiva de
-                    alíquota
+                    Não há limite de isenção para vendas (qualquer lucro é
+                    tributado).
                   </p>
                 </div>
               </CardContent>
