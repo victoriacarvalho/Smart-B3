@@ -1,4 +1,3 @@
-// app/calculation/_actions/calculates-taxes.tsx
 "use server";
 
 import React from "react";
@@ -6,10 +5,9 @@ import { db } from "@/app/_lib/prisma";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { AssetType, TransactionType, Prisma } from "@prisma/client";
-import ReactPDF from "@react-pdf/renderer";
+import { renderToBuffer } from "@react-pdf/renderer";
 import { put } from "@vercel/blob";
 import { DarfDocument } from "./darf-document";
-import { Readable } from "stream";
 
 type ActionResult = {
   success: boolean;
@@ -250,13 +248,9 @@ export async function calculateTax(
   const fileName = `DARF-${codigoReceita}-${user.id}-${Date.now()}.pdf`;
 
   try {
-    const pdfStream = await ReactPDF.renderToStream(
-      <DarfDocument {...darfData} />,
-    );
+    const pdfBuffer = await renderToBuffer(<DarfDocument {...darfData} />);
 
-    const nodeStream = Readable.fromWeb(pdfStream as never);
-
-    const blob = await put(fileName, nodeStream, {
+    const blob = await put(fileName, pdfBuffer, {
       access: "public",
       contentType: "application/pdf",
     });
