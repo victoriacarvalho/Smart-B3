@@ -57,7 +57,6 @@ export async function calculateTax(
   let totalSalesBrazil = 0;
   let totalProfitBrazil_Swing = 0;
   let totalProfitBrazil_DayTrade = 0;
-  let totalSalesForeign = 0;
   let totalProfitForeign = 0;
 
   for (const tx of saleTransactions) {
@@ -66,7 +65,6 @@ export async function calculateTax(
     const profit = saleValue - costValue;
 
     if (assetType === AssetType.CRIPTO && tx.asset.isForeign) {
-      totalSalesForeign += saleValue;
       totalProfitForeign += profit;
     } else if (assetType === AssetType.ACAO && tx.isDayTrade) {
       totalProfitBrazil_DayTrade += profit;
