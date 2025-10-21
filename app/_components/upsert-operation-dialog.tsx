@@ -134,40 +134,29 @@ const UpsertOperationDialog = ({
   const unitPrice = watch("unitPrice");
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
 
-  const isUpdate = Boolean(operationId);
-
   useEffect(() => {
-    if (!isUpdate) {
-      const identifier = assetInfo.apiId ?? assetInfo.symbol;
+    const identifier =
+      assetInfo.type === AssetType.CRIPTO ? assetInfo.apiId : assetInfo.symbol;
 
-      if (identifier) {
-        setIsFetchingPrice(true);
-        fetch(`/api/assets/price?symbol=${identifier}&type=${assetInfo.type}`)
-          .then((res) => {
-            if (!res.ok) {
-              console.warn("Preço atual não encontrado para", identifier);
-              return null;
-            }
-            return res.json();
-          })
-          .then((data) => {
-            if (data?.price) {
-              setValue("unitPrice", data.price, { shouldValidate: true });
-            }
-          })
-          .catch((err) =>
-            console.error("Erro ao buscar preço da API:", err.message),
-          )
-          .finally(() => setIsFetchingPrice(false));
-      }
+    if (identifier) {
+      setIsFetchingPrice(true);
+      fetch(`/api/assets/price?symbol=${identifier}&type=${assetInfo.type}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Preço não encontrado");
+          return res.json();
+        })
+        .then((data) => {
+          if (data.price) {
+            setValue("unitPrice", data.price, { shouldValidate: true });
+          }
+        })
+        .catch((err) => console.error("Erro ao buscar preço:", err))
+        .finally(() => setIsFetchingPrice(false));
     }
-  }, [assetInfo.apiId, assetInfo.symbol, assetInfo.type, isUpdate, setValue]);
+  }, [assetInfo, setValue]);
 
   const estimatedTotal =
-    typeof quantity === "number" &&
-    quantity > 0 &&
-    typeof unitPrice === "number" &&
-    unitPrice > 0
+    quantity > 0 && unitPrice > 0
       ? (quantity * unitPrice).toLocaleString("pt-BR", {
           style: "currency",
           currency: "BRL",
@@ -186,7 +175,7 @@ const UpsertOperationDialog = ({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isUpdate ? "Editar" : "Adicionar"} Operação para{" "}
+            {"Adicionar"} Operação para{" "}
             <span className="text-primary">
               {assetInfo.symbol.toUpperCase()}
             </span>
@@ -388,9 +377,7 @@ const UpsertOperationDialog = ({
                   ? "Salvando..."
                   : isFetchingPrice
                     ? "Aguarde..."
-                    : isUpdate
-                      ? "Atualizar Operação"
-                      : "Adicionar Operação"}
+                    : "Adicionar Operação"}
               </Button>
             </DialogFooter>
           </form>
