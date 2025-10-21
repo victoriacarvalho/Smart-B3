@@ -23,11 +23,7 @@ const SubscriptionPage = async () => {
       <div className="space-y-6 p-6">
         <h1 className="text-2xl font-bold">Cálculo de impostos</h1>
 
-        {/* ALTERAÇÃO AQUI: Trocado 'lg:items-start' por 'lg:items-stretch'
-          para forçar a mesma altura em todos os cards no desktop.
-        */}
         <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-stretch lg:justify-center">
-          {/* Card 1: Criptomoeda (Conteúdo Corrigido) */}
           <Card className="flex w-full max-w-sm flex-col justify-between">
             <div>
               <CardHeader className="mb-4 border-b border-solid py-8 text-center">
@@ -69,7 +65,6 @@ const SubscriptionPage = async () => {
             </CardFooter>
           </Card>
 
-          {/* Card 2: Ação (Conteúdo OK) */}
           <Card className="flex w-full max-w-sm flex-col justify-between">
             <div>
               <CardHeader className="mb-4 border-b border-solid py-8 text-center">
@@ -99,7 +94,6 @@ const SubscriptionPage = async () => {
             </CardFooter>
           </Card>
 
-          {/* Card 3: Fundos Imobiliários (Conteúdo Corrigido) */}
           <Card className="flex w-full max-w-sm flex-col justify-between">
             <div>
               <CardHeader className="mb-4 border-b border-solid py-8 text-center">

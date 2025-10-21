@@ -5,10 +5,9 @@ import React from "react";
 import { db } from "@/app/_lib/prisma";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { AssetType, TransactionType } from "@prisma/client";
+import { AssetType, TransactionType, Prisma } from "@prisma/client";
 import ReactPDF from "@react-pdf/renderer";
 import { put } from "@vercel/blob";
-import { Prisma } from "@prisma/client";
 import { DarfDocument } from "./darf-document";
 import { Readable } from "stream";
 

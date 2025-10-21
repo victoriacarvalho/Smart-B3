@@ -28,7 +28,7 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Ativo
+          Data
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -58,8 +58,8 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
     cell: ({ row }) => new Date(row.original.date).toLocaleDateString("pt-BR"),
   },
   {
-    accessorKey: "quantity",
-    header: "Quantidade",
+    accessorKey: "value",
+    header: "Valor",
     cell: ({ row }) => Number(row.original.quantity).toLocaleString("pt-BR"),
   },
   {
