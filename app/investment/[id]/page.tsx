@@ -96,19 +96,6 @@ const InvestmentPage = async ({ params }: { params: { id: string } }) => {
               </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Total Investido</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                {new Intl.NumberFormat("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                }).format(totalInvested)}
-              </p>
-            </CardContent>
-          </Card>
         </div>
 
         <Card className="flex flex-1 flex-col overflow-hidden">
