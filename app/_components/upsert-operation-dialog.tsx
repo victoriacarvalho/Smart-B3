@@ -1,4 +1,3 @@
-// app/_components/upsert-operation-dialog.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -45,7 +44,12 @@ import {
   SelectValue,
 } from "./ui/select";
 
-// --- Tipos ---
+// Opções para o seletor de local da corretora
+const BROKERAGE_LOCATION_OPTIONS = [
+  { value: "false", label: "Nacional (Brasil)" },
+  { value: "true", label: "Estrangeira (Exterior)" },
+];
+
 interface ActiveAssetInfo {
   assetId: string;
   symbol: string;
@@ -54,7 +58,6 @@ interface ActiveAssetInfo {
   apiId?: string | null;
 }
 
-// --- Schema de validação ---
 const formSchema = z
   .object({
     id: z.string().cuid().optional(),
@@ -76,6 +79,7 @@ const formSchema = z
     date: z.date({ message: "A data é obrigatória." }),
     operationType: z.nativeEnum(OperationType).optional(),
     retentionPeriod: z.nativeEnum(RetentionPeriod).optional(),
+    isForeign: z.boolean().optional(), // Campo para local da corretora
   })
   .superRefine((data, ctx) => {
     if (
@@ -95,6 +99,14 @@ const formSchema = z
         code: z.ZodIssueCode.custom,
         message: "O prazo de retenção (Curto/Longo) é obrigatório.",
         path: ["retentionPeriod"],
+      });
+    }
+
+    if (data.assetType === AssetType.CRIPTO && data.isForeign === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Informe se a corretora é nacional ou estrangeira.",
+        path: ["isForeign"],
       });
     }
   });
@@ -135,6 +147,9 @@ const UpsertOperationDialog = ({
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
 
   useEffect(() => {
+    // Não busca preço se for uma edição, para não sobrescrever o valor histórico
+    if (operationId) return;
+
     const identifier =
       assetInfo.type === AssetType.CRIPTO ? assetInfo.apiId : assetInfo.symbol;
 
@@ -153,7 +168,7 @@ const UpsertOperationDialog = ({
         .catch((err) => console.error("Erro ao buscar preço:", err))
         .finally(() => setIsFetchingPrice(false));
     }
-  }, [assetInfo, setValue]);
+  }, [assetInfo, setValue, operationId]);
 
   const estimatedTotal =
     quantity > 0 && unitPrice > 0
@@ -175,7 +190,7 @@ const UpsertOperationDialog = ({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {"Adicionar"} Operação para{" "}
+            {operationId ? "Editar" : "Adicionar"} Operação para{" "}
             <span className="text-primary">
               {assetInfo.symbol.toUpperCase()}
             </span>
@@ -319,6 +334,40 @@ const UpsertOperationDialog = ({
                         </FormControl>
                         <SelectContent>
                           {OPERATION_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {assetInfo.type === AssetType.CRIPTO && (
+                <FormField
+                  control={form.control}
+                  name="isForeign"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Local da Corretora</FormLabel>
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(value === "true")
+                        }
+                        value={
+                          field.value !== undefined ? String(field.value) : ""
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Nacional ou Estrangeira..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {BROKERAGE_LOCATION_OPTIONS.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
