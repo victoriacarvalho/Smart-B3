@@ -98,12 +98,18 @@ const NotificationPage = () => {
                   />
                 </div>
               </div>
-              <SheetFooter>
+
+              <SheetFooter className="gap-2">
                 <Button type="submit" disabled={isPending}>
                   {isPending ? "Enviando..." : "Salvar "}
                 </Button>
                 <SheetClose asChild>
-                  <Button type="button" variant="outline" disabled={isPending}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isPending}
+                    className="space-y-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                  >
                     Cancelar
                   </Button>
                 </SheetClose>
