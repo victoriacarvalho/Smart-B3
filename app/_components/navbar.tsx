@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { MenuIcon, XIcon } from "lucide-react";
+import { ThemeToggle } from "./theme-toggle";
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -40,6 +41,7 @@ const Navbar = () => {
         </div>
       </div>
       <div className="flex items-center gap-4">
+        <ThemeToggle />
         <UserButton showName />
         <button
           className="md:hidden"

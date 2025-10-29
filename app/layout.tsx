@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
-import { Toaster } from "@/app/_components/ui/sonner"; // Importa o Toaster
+import { Toaster } from "@/app/_components/ui/sonner";
+import { ThemeProvider } from "@/app/_components/theme-provider";
 
 export const metadata: Metadata = {
   title: "Smart B3",
@@ -16,15 +17,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt" suppressHydrationWarning>
-      <body className="dark">
-        <ClerkProvider
-          appearance={{
-            baseTheme: dark,
-          }}
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
         >
-          {children}
-          <Toaster richColors />{" "}
-        </ClerkProvider>
+          <ClerkProvider
+            appearance={{
+              baseTheme: dark,
+            }}
+          >
+            {children}
+            <Toaster richColors />{" "}
+          </ClerkProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
