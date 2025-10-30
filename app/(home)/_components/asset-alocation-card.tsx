@@ -1,4 +1,3 @@
-// app/(home)/_components/asset-allocation-card.tsx
 "use client";
 
 import {
@@ -50,6 +49,7 @@ const AssetAllocationCard = ({
                       : "Criptos"
                 }
                 value={parseFloat(item.percentage.toFixed(2))}
+                type={item.type} // <-- Propriedade 'type' sendo passada
               />
               <Progress value={item.percentage} />
             </div>
