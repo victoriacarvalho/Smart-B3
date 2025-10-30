@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { TransactionActions } from "@/app/_components/transactions-actions";
 import TransactionTypeBadge from "../_components/type-badge";
+import EditTransactionButton from "../_components/edit-transaction-button";
 
 export type TransactionColumnData = Transaction & {
   asset: {
@@ -103,7 +104,15 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
     id: "actions",
     header: () => <div className="text-right">Ações</div>,
     cell: ({ row }) => {
-      return <TransactionActions transaction={row.original} />;
+      // 2. Obter a transação da linha atual
+      const transactionData = row.original;
+
+      return (
+        <div className="flex items-center justify-end gap-1">
+          <EditTransactionButton transaction={transactionData} />{" "}
+          <TransactionActions transaction={transactionData} />
+        </div>
+      );
     },
   },
 ];
