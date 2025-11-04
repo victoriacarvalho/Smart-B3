@@ -19,11 +19,10 @@ const EditTransactionButton = ({ transaction }: EditTransactionButtonProps) => {
   const [isPending, startTransition] = useTransition();
 
   const handleSubmit = async (formData: z.infer<typeof formSchema>) => {
-    console.log("Form data submitted:", formData);
-
     const dataForAction = {
       ...formData,
       assetType: transaction.asset.type,
+      fees: formData.fees ?? 0,
     };
 
     startTransition(async () => {
@@ -37,13 +36,8 @@ const EditTransactionButton = ({ transaction }: EditTransactionButtonProps) => {
           toast.error(
             "Falha ao atualizar a transação: O servidor retornou um erro inesperado.",
           );
-          console.error(
-            "Server action failed or returned unexpected result:",
-            result,
-          );
         }
       } catch (error) {
-        console.error("Error during submit transition:", error);
         if (error instanceof Error) {
           toast.error(`Ocorreu um erro: ${error.message}`);
         } else {
