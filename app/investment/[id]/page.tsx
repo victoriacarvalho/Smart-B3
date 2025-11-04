@@ -7,9 +7,10 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/app/_components/ui/card";
+} from "@/app/_components/ui/card"; // Mantemos para o Histórico de Transações
 import { AddTransactionDialog } from "@/app/_components/add-transaction-button";
 import AssetRealTimeInfo from "../_component/asset-real-time-info";
+import { CometCard } from "@/app/_components/ui/comet-card";
 
 const InvestmentPage = async ({ params }: { params: { id: string } }) => {
   const { userId } = auth();
@@ -65,49 +66,61 @@ const InvestmentPage = async ({ params }: { params: { id: string } }) => {
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Este componente é separado, para aplicar o efeito 3D nele,
+              a modificação teria que ser feita *dentro* do arquivo AssetRealTimeInfo.tsx */}
           <AssetRealTimeInfo
             assetSymbol={asset.symbol}
             assetType={asset.type}
           />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Quantidade Total</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
+          {/* --- CARD "QUANTIDADE TOTAL" TRANSFORMADO --- */}
+          <CometCard>
+            <div className="flex h-full w-full flex-col justify-start rounded-[16px] border-0 bg-[#1F2121] p-6 saturate-0">
+              {/* Título (similar ao CardTitle) */}
+              <h3 className="font-mono text-sm font-medium text-gray-400">
+                Quantidade Total
+              </h3>
+              {/* Conteúdo (similar ao CardContent) */}
+              <p className="mt-2 text-2xl font-bold text-white">
                 {totalQuantity.toLocaleString("pt-BR")}
               </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Preço Médio</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
+            </div>
+          </CometCard>
+
+          {/* --- CARD "PREÇO MÉDIO" TRANSFORMADO --- */}
+          <CometCard>
+            <div className="flex h-full w-full flex-col justify-start rounded-[16px] border-0 bg-[#1F2121] p-6 saturate-0">
+              <h3 className="font-mono text-sm font-medium text-gray-400">
+                Preço Médio
+              </h3>
+              <p className="mt-2 text-2xl font-bold text-white">
                 {new Intl.NumberFormat("pt-BR", {
                   style: "currency",
                   currency: "BRL",
                 }).format(asset.averagePrice.toNumber())}
               </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Total Investido</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
+            </div>
+          </CometCard>
+
+          {/* --- CARD "TOTAL INVESTIDO" TRANSFORMADO --- */}
+          <CometCard>
+            <div className="flex h-full w-full flex-col justify-start rounded-[16px] border-0 bg-[#1F2121] p-6 saturate-0">
+              <h3 className="font-mono text-sm font-medium text-gray-400">
+                Total Investido
+              </h3>
+              <p className="mt-2 text-2xl font-bold text-white">
                 {new Intl.NumberFormat("pt-BR", {
                   style: "currency",
                   currency: "BRL",
                 }).format(totalInvested)}
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </CometCard>
+
+          {/* O card que eu adicionei erroneamente foi removido */}
         </div>
 
+        {/* O Histórico de Transações permanece com o Card padrão */}
         <Card className="hidden md:block">
           <CardHeader>
             <CardTitle>Histórico de Transações</CardTitle>
