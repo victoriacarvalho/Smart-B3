@@ -4,13 +4,16 @@ import { UserButton } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MenuIcon, XIcon } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
+import { useTheme } from "next-themes";
 
 const Navbar = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const [logoSrc, setLogoSrc] = useState("/logo.svg");
 
   const navLinks = [
     { href: "/", label: "Dashboard" },
@@ -20,10 +23,14 @@ const Navbar = () => {
     { href: "/notifications", label: "Alertas" },
   ];
 
+  useEffect(() => {
+    setLogoSrc(resolvedTheme === "light" ? "/logo-black.svg" : "/logo.svg");
+  }, [resolvedTheme]);
+
   return (
     <nav className="relative flex items-center justify-between border-b border-solid px-4 py-4 md:px-8">
       <div className="flex items-center gap-4 md:gap-10">
-        <Image src="/logo.svg" width={173} height={39} alt="Logo" />
+        <Image src={logoSrc} width={173} height={39} alt="Logo" />{" "}
         <div className="hidden items-center gap-10 md:flex">
           {navLinks.map((link) => (
             <Link

@@ -3,12 +3,13 @@ import { redirect } from "next/navigation";
 import Navbar from "@/app/_components/navbar";
 import TimeSelect from "./_components/time-select";
 import SummaryCards from "./_components/summary-cards";
-import LastTransactionsCard from "./_components/last-transactions-card";
 import { ScrollArea } from "@/app/_components/ui/scroll-area";
 import { getDashboard } from "../_data/get-dashboard";
 import { AddTransactionDialog } from "../_components/add-transaction-button";
 import AssetPieChart from "./_components/asset-pie-chart";
 import AssetAllocationCard from "./_components/asset-alocation-card";
+import MarketMoversCard from "./_components/market-movers-card";
+import LastTransactionsCard from "./_components/last-transactions-card";
 
 interface HomeProps {
   searchParams: {
@@ -63,7 +64,9 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
           </div>
         </div>
 
+        {/* --- LAYOUT PRINCIPAL MODIFICADO --- */}
         <div className="grid h-full grid-cols-1 gap-6 overflow-hidden lg:grid-cols-3">
+          {/* Coluna da Esquerda (2/3) - Gráficos e Resumo */}
           <ScrollArea className="h-full lg:col-span-2">
             <div className="flex flex-col gap-6 pr-6">
               {" "}
@@ -76,13 +79,23 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
                   portfolioAllocation={dashboardData.portfolioAllocation || []}
                 />
               </div>
+              {/* O LastTransactionsCard FOI MOVIDO DAQUI */}
             </div>
           </ScrollArea>
-          <div className="hidden flex-col lg:flex">
-            <LastTransactionsCard
-              lastTransactions={dashboardData.lastTransactions || []}
-            />
-          </div>
+
+          {/* Coluna da Direita (1/3) - Cards Laterais */}
+          {/* Agora esta coluna é uma ScrollArea para comportar os dois cards */}
+          <ScrollArea className="hidden h-full lg:block">
+            <div className="flex flex-col gap-6">
+              <MarketMoversCard />
+              <LastTransactionsCard
+                lastTransactions={(dashboardData.lastTransactions || []).slice(
+                  0,
+                  3,
+                )}
+              />
+            </div>
+          </ScrollArea>
         </div>
       </div>
     </>

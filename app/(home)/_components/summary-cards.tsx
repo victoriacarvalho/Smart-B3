@@ -1,15 +1,15 @@
 import {
   PiggyBank,
+  ReceiptText,
   TrendingDown,
   TrendingUp,
-  CircleDollarSign,
   Wallet,
 } from "lucide-react";
 import SummaryCard from "./summary-card";
 
 interface SummaryCardsProps {
   summary?: {
-    totalNetProfit: number;
+    totalNetProfit: number; // Não mais usado para o card de Lucro/Prejuízo
     totalTaxDue: number;
     totalSold: number;
     totalInvestedCost: number;
@@ -22,7 +22,16 @@ const SummaryCards = ({ summary }: SummaryCardsProps) => {
     return null;
   }
 
-  const isProfit = summary.totalNetProfit >= 0;
+  // --- LÓGICA ANTIGA ---
+  // const isProfit = summary.totalNetProfit >= 0;
+
+  // --- LÓGICA NOVA ---
+  // Calcula o lucro/prejuízo total da carteira
+  const portfolioProfitLoss =
+    summary.currentPortfolioValue - summary.totalInvestedCost;
+
+  // Verifica se é lucro (positivo ou zero) ou prejuízo (negativo)
+  const isPortfolioProfit = portfolioProfitLoss >= 0;
 
   return (
     <div className="space-y-6">
@@ -35,16 +44,21 @@ const SummaryCards = ({ summary }: SummaryCardsProps) => {
         />
         <SummaryCard
           icon={
-            isProfit ? (
+            isPortfolioProfit ? ( // <-- Usa a nova variável
               <TrendingUp className="h-6 w-6 text-green-600" />
             ) : (
               <TrendingDown className="h-6 w-6 text-red-600" />
             )
           }
-          title={isProfit ? "Lucro/Prejuízo no Mês" : "Prejuízo no Mês"}
-          amount={summary.totalNetProfit}
+          // Título atualizado para refletir o P/L total
+          title={
+            isPortfolioProfit
+              ? "Lucro/Prejuízo da Carteira"
+              : "Prejuízo da Carteira"
+          }
+          amount={portfolioProfitLoss} // <-- Usa a nova variável
           size="large"
-          isProfit={isProfit}
+          isProfit={isPortfolioProfit} // <-- Usa a nova variável
         />
       </div>
 
@@ -56,9 +70,9 @@ const SummaryCards = ({ summary }: SummaryCardsProps) => {
         />
 
         <SummaryCard
-          icon={<CircleDollarSign className="h-5 w-5" />}
-          title="Total Vendido no Mês"
-          amount={summary.totalSold}
+          icon={<ReceiptText className="h-5 w-5" />}
+          title="Imposto Devido no Mês"
+          amount={summary.totalTaxDue}
         />
       </div>
     </div>
