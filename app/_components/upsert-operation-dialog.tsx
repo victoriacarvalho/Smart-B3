@@ -4,13 +4,12 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AssetType } from "@prisma/client";
+import { AssetType, OperationType, TransactionType } from "@prisma/client";
 import { NumericFormat } from "react-number-format";
-
-import { upsertTransactionSchema } from "@/app/_actions/schema"; // Schema importado
 
 import {
   OPERATION_TYPE_OPTIONS,
+  RetentionPeriod,
   RETENTION_PERIOD_OPTIONS,
   TRANSACTION_TYPE_OPTIONS,
 } from "../_constants/transactions";
@@ -45,13 +44,11 @@ import {
   SelectValue,
 } from "./ui/select";
 
-// Este BROKERAGE_LOCATION_OPTIONS não será mais usado neste formulário
-/*
+// Opções para o seletor de local da corretora
 const BROKERAGE_LOCATION_OPTIONS = [
   { value: "false", label: "Nacional (Brasil)" },
   { value: "true", label: "Estrangeira (Exterior)" },
 ];
-*/
 
 interface ActiveAssetInfo {
   assetId: string;
@@ -61,15 +58,70 @@ interface ActiveAssetInfo {
   apiId?: string | null;
 }
 
+const formSchema = z
+  .object({
+    id: z.string().cuid().optional(),
+    assetId: z.string().cuid("ID do ativo inválido."),
+    assetType: z.nativeEnum(AssetType),
+    type: z.nativeEnum(TransactionType, {
+      message: "O tipo (Compra/Venda) é obrigatório.",
+    }),
+    quantity: z
+      .number({
+        message: "A quantidade é obrigatória.",
+      })
+      .positive({
+        message: "A quantidade deve ser positiva.",
+      }),
+    unitPrice: z
+      .number({ message: "Preço unitário deve ser um número." })
+      .positive("O preço unitário deve ser maior que zero."),
+    date: z.date({ message: "A data é obrigatória." }),
+    operationType: z.nativeEnum(OperationType).optional(),
+    retentionPeriod: z.nativeEnum(RetentionPeriod).optional(),
+    isForeign: z.boolean().optional(), // Campo para local da corretora
+  })
+  .superRefine((data, ctx) => {
+    if (
+      (data.assetType === AssetType.ACAO ||
+        data.assetType === AssetType.CRIPTO) &&
+      !data.operationType
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "O tipo de operação (Swing/Day Trade) é obrigatório.",
+        path: ["operationType"],
+      });
+    }
+
+    if (data.assetType === AssetType.FII && !data.retentionPeriod) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "O prazo de retenção (Curto/Longo) é obrigatório.",
+        path: ["retentionPeriod"],
+      });
+    }
+
+    if (data.assetType === AssetType.CRIPTO && data.isForeign === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Informe se a corretora é nacional ou estrangeira.",
+        path: ["isForeign"],
+      });
+    }
+  });
+
+// --- Props ---
 interface UpsertOperationDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  onSubmit: (data: z.infer<typeof upsertTransactionSchema>) => Promise<void>;
+  onSubmit: (data: z.infer<typeof formSchema>) => Promise<void>;
   assetInfo: ActiveAssetInfo;
   operationId?: string;
-  defaultValues?: Partial<z.infer<typeof upsertTransactionSchema>>;
+  defaultValues?: Partial<z.infer<typeof formSchema>>;
 }
 
+// --- Componente ---
 const UpsertOperationDialog = ({
   isOpen,
   setIsOpen,
@@ -78,16 +130,14 @@ const UpsertOperationDialog = ({
   operationId,
   defaultValues,
 }: UpsertOperationDialogProps) => {
-  const form = useForm<z.input<typeof upsertTransactionSchema>>({
-    resolver: zodResolver(upsertTransactionSchema),
+  const form = useForm<z.input<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       ...defaultValues,
       date: defaultValues?.date ? new Date(defaultValues.date) : new Date(),
       assetId: assetInfo.assetId,
+      assetType: assetInfo.type,
       id: operationId,
-      fees: defaultValues?.fees ?? 0,
-      // assetType não faz parte do schema, então não é incluído aqui
-      // operationType e retentionPeriod virão de defaultValues se existirem
     },
   });
 
@@ -97,7 +147,8 @@ const UpsertOperationDialog = ({
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
 
   useEffect(() => {
-    if (operationId) return; // Não buscar preço na edição
+    // Não busca preço se for uma edição, para não sobrescrever o valor histórico
+    if (operationId) return;
 
     const identifier =
       assetInfo.type === AssetType.CRIPTO ? assetInfo.apiId : assetInfo.symbol;
@@ -127,17 +178,6 @@ const UpsertOperationDialog = ({
         })
       : null;
 
-  // Função interna de submit para garantir que 'fees' seja número
-  const handleFormSubmit = (
-    values: z.input<typeof upsertTransactionSchema>,
-  ) => {
-    const dataToSubmit = {
-      ...values,
-      fees: values.fees ?? 0,
-    };
-    onSubmit(dataToSubmit);
-  };
-
   return (
     <Dialog
       open={isOpen}
@@ -161,10 +201,7 @@ const UpsertOperationDialog = ({
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleFormSubmit)}
-            className="space-y-4"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Tipo e Data */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
@@ -261,26 +298,6 @@ const UpsertOperationDialog = ({
                 )}
               />
             </div>
-            {/* Campo Fees */}
-            <FormField
-              control={form.control}
-              name="fees"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Taxas (Opcional)</FormLabel>
-                  <FormControl>
-                    <MoneyInput
-                      placeholder="R$ 0,00"
-                      value={field.value ?? ""}
-                      onValueChange={({ floatValue }) =>
-                        field.onChange(floatValue ?? 0)
-                      } // Garante 0 se vazio
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {/* Total */}
             {estimatedTotal && !isFetchingPrice && (
@@ -329,7 +346,39 @@ const UpsertOperationDialog = ({
                 />
               )}
 
-              {/* REMOVIDO O FormField para isForeign */}
+              {assetInfo.type === AssetType.CRIPTO && (
+                <FormField
+                  control={form.control}
+                  name="isForeign"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Local da Corretora</FormLabel>
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(value === "true")
+                        }
+                        value={
+                          field.value !== undefined ? String(field.value) : ""
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Nacional ou Estrangeira..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {BROKERAGE_LOCATION_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {assetInfo.type === AssetType.FII && (
                 <FormField
@@ -377,9 +426,7 @@ const UpsertOperationDialog = ({
                   ? "Salvando..."
                   : isFetchingPrice
                     ? "Aguarde..."
-                    : operationId
-                      ? "Salvar Alterações"
-                      : "Adicionar Operação"}
+                    : "Adicionar Operação"}
               </Button>
             </DialogFooter>
           </form>
