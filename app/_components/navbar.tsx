@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { MenuIcon, XIcon } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { useTheme } from "next-themes";
+import { GlobalAssetSearch } from "./global-asset-search";
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -46,6 +47,7 @@ const Navbar = () => {
             </Link>
           ))}
         </div>
+        <GlobalAssetSearch />
       </div>
       <div className="flex items-center gap-4">
         <ThemeToggle />

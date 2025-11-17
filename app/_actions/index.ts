@@ -23,7 +23,7 @@ const upsertTransactionSchema = z
   .object({
     id: z.string().cuid().optional(),
     assetId: z.string().cuid(),
-    assetType: z.nativeEnum(AssetType), // Campo auxiliar para validação
+    assetType: z.nativeEnum(AssetType),
     type: z.nativeEnum(TransactionType),
     quantity: z.number().positive("A quantidade deve ser positiva."),
     unitPrice: z.number().positive("O preço unitário deve ser positivo."),
