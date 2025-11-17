@@ -1,19 +1,26 @@
-import { AssetType, OperationType, TransactionType } from "@prisma/client";
+import {
+  AssetType,
+  OperationType,
+  TransactionType,
+  RetentionPeriod,
+} from "@prisma/client";
 
-export const ASSET_TYPE_LABELS = {
-  ACAO: "Ação",
-  FII: "Fundo de Investimento Imobiliário",
-  CRIPTO: "Criptomoeda",
+export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
+  [AssetType.ACAO]: "Ação",
+  [AssetType.FII]: "Fundo de Investimento Imobiliário",
+  [AssetType.CRIPTO]: "Criptomoeda",
+  [AssetType.UNIFICADA]: "Relatório Unificado",
 };
 
-export const TRANSACTION_TYPE_LABELS = {
-  COMPRA: "Compra",
-  VENDA: "Venda",
+export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
+  [TransactionType.COMPRA]: "Compra",
+  [TransactionType.VENDA]: "Venda",
 };
 
-export const OPERATION_TYPE_LABELS = {
-  SWING_TRADE: "Swing Trade",
-  DAY_TRADE: "Day Trade",
+export const OPERATION_TYPE_LABELS: Record<OperationType, string> = {
+  [OperationType.SWING_TRADE]: "Swing Trade",
+  [OperationType.DAY_TRADE]: "Day Trade",
+  [OperationType.DISCOVERY_SALE]: "Venda a descoberto",
 };
 
 export const TRANSACTION_TYPE_OPTIONS = [
@@ -32,7 +39,6 @@ export const ASSET_TYPE_OPTIONS = [
     value: AssetType.ACAO,
     label: ASSET_TYPE_LABELS[AssetType.ACAO],
   },
-
   {
     value: AssetType.FII,
     label: ASSET_TYPE_LABELS[AssetType.FII],
@@ -54,12 +60,8 @@ export const OPERATION_TYPE_OPTIONS = [
   },
 ];
 
-export enum RetentionPeriod {
-  CURTO_PRAZO = "CURTO_PRAZO",
-  LONGO_PRAZO = "LONGO_PRAZO",
-}
-
-export const RETENTION_PERIOD_LABELS = {
+export const RETENTION_PERIOD_LABELS: Record<RetentionPeriod, string> = {
+  // Tipagem explícita
   [RetentionPeriod.CURTO_PRAZO]: "Curto Prazo (Menos de 1 ano)",
   [RetentionPeriod.LONGO_PRAZO]: "Longo Prazo (1 ano ou mais)",
 };
@@ -76,7 +78,8 @@ export const RETENTION_PERIOD_OPTIONS = [
 ];
 
 export const ASSET_TYPE_COLORS: Record<AssetType, string> = {
-  ACAO: "hsl(142.1 76.2% 36.3%)",
-  FII: "hsl(0 84.2% 60.2%)",
-  CRIPTO: "hsl(0 0% 95%)",
+  [AssetType.ACAO]: "hsl(142.1 76.2% 36.3%)",
+  [AssetType.FII]: "hsl(0 84.2% 60.2%)",
+  [AssetType.CRIPTO]: "hsl(0 0% 95%)",
+  [AssetType.UNIFICADA]: "hsl(240 5% 64.9%)",
 };

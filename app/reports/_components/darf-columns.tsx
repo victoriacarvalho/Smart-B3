@@ -10,6 +10,7 @@ const assetTypeNames = {
   ACAO: "Ações",
   FII: "Fundos Imobiliários",
   CRIPTO: "Criptomoedas",
+  UNIFICADA: "Relatório Mensal Unificado",
 };
 
 export type DarfColumnData = Darf;

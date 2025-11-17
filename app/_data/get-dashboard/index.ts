@@ -1,7 +1,9 @@
+// app/_data/get-dashboard/index.ts
 "use server";
 
 import { db } from "@/app/_lib/prisma";
 import { auth } from "@clerk/nextjs/server";
+// Importação do AssetType corrigida
 import { AssetType, Transaction } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { fetchStockOrFiiPrice } from "@/lib/services/api/brapi";
@@ -78,7 +80,11 @@ export const getDashboard = async (
 
   let totalInvestedCost = new Decimal(0);
   let currentPortfolioValue = new Decimal(0);
-  const portfolioAllocation: { [key in AssetType]: Decimal } = {
+
+  // CORREÇÃO: Usando Exclude para tipar o objeto
+  const portfolioAllocation: {
+    [key in Exclude<AssetType, "UNIFICADA">]: Decimal;
+  } = {
     ACAO: new Decimal(0),
     FII: new Decimal(0),
     CRIPTO: new Decimal(0),
@@ -92,8 +98,16 @@ export const getDashboard = async (
       asset.quantity.times(asset.averagePrice),
     );
     currentPortfolioValue = currentPortfolioValue.plus(assetCurrentValue);
-    portfolioAllocation[asset.type] =
-      portfolioAllocation[asset.type].plus(assetCurrentValue);
+
+    // CORREÇÃO: Adicionado 'if' para não tentar alocar 'UNIFICADA'
+    if (
+      asset.type === AssetType.ACAO ||
+      asset.type === AssetType.FII ||
+      asset.type === AssetType.CRIPTO
+    ) {
+      portfolioAllocation[asset.type] =
+        portfolioAllocation[asset.type].plus(assetCurrentValue);
+    }
   });
 
   const monthlyResults = await db.monthlyResult.findMany({
@@ -116,12 +130,20 @@ export const getDashboard = async (
 
   const profitByAssetType = monthlyResults.reduce(
     (acc, result) => {
-      acc[result.assetType] = (acc[result.assetType] || new Decimal(0)).plus(
-        result.netProfit,
-      );
+      // CORREÇÃO: Adicionado 'if' para não tentar alocar 'UNIFICADA'
+      if (
+        result.assetType === AssetType.ACAO ||
+        result.assetType === AssetType.FII ||
+        result.assetType === AssetType.CRIPTO
+      ) {
+        acc[result.assetType] = (acc[result.assetType] || new Decimal(0)).plus(
+          result.netProfit,
+        );
+      }
       return acc;
     },
-    {} as Record<AssetType, Decimal>,
+    // CORREÇÃO: Tipagem do acumulador
+    {} as { [key in Exclude<AssetType, "UNIFICADA">]: Decimal },
   );
 
   const lastTransactionsFromDb = await db.transaction.findMany({

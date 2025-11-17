@@ -1,5 +1,7 @@
+// app/_data/get-dashboard-data.ts
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/app/_lib/prisma";
+// Importação do AssetType corrigida
 import { AssetType, TransactionType } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 
@@ -62,7 +64,11 @@ export async function getDashboardData(month: string) {
 
   let totalInvestedCost = new Decimal(0);
   let currentPortfolioValue = new Decimal(0);
-  const portfolioAllocation: { [key in AssetType]: Decimal } = {
+
+  // CORREÇÃO: Usando Exclude para tipar o objeto
+  const portfolioAllocation: {
+    [key in Exclude<AssetType, "UNIFICADA">]: Decimal;
+  } = {
     ACAO: new Decimal(0),
     FII: new Decimal(0),
     CRIPTO: new Decimal(0),
@@ -76,8 +82,16 @@ export async function getDashboardData(month: string) {
       asset.quantity.times(asset.averagePrice),
     );
     currentPortfolioValue = currentPortfolioValue.plus(assetCurrentValue);
-    portfolioAllocation[asset.type] =
-      portfolioAllocation[asset.type].plus(assetCurrentValue);
+
+    // CORREÇÃO: Adicionado 'if' para não tentar alocar 'UNIFICADA'
+    if (
+      asset.type === AssetType.ACAO ||
+      asset.type === AssetType.FII ||
+      asset.type === AssetType.CRIPTO
+    ) {
+      portfolioAllocation[asset.type] =
+        portfolioAllocation[asset.type].plus(assetCurrentValue);
+    }
   });
 
   const totalNetProfit = currentPortfolioValue.minus(totalInvestedCost);
@@ -92,7 +106,11 @@ export async function getDashboardData(month: string) {
   );
 
   let totalSoldInMonth = new Decimal(0);
-  const profitByAssetType: { [key in AssetType]: Decimal } = {
+
+  // CORREÇÃO: Usando Exclude para tipar o objeto
+  const profitByAssetType: {
+    [key in Exclude<AssetType, "UNIFICADA">]: Decimal;
+  } = {
     ACAO: new Decimal(0),
     FII: new Decimal(0),
     CRIPTO: new Decimal(0),
@@ -106,8 +124,16 @@ export async function getDashboardData(month: string) {
       const profit = saleValue.minus(costOfSale).minus(sale.fees);
 
       totalSoldInMonth = totalSoldInMonth.plus(saleValue);
-      profitByAssetType[asset.type] =
-        profitByAssetType[asset.type].plus(profit);
+
+      // CORREÇÃO: Adicionado 'if' para não tentar alocar 'UNIFICADA'
+      if (
+        asset.type === AssetType.ACAO ||
+        asset.type === AssetType.FII ||
+        asset.type === AssetType.CRIPTO
+      ) {
+        profitByAssetType[asset.type] =
+          profitByAssetType[asset.type].plus(profit);
+      }
     }
   }
 

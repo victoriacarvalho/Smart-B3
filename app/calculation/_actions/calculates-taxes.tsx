@@ -1,3 +1,4 @@
+// app/calculation/_actions/calculates-taxes.tsx
 "use server";
 
 import React from "react";
@@ -6,8 +7,9 @@ import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { AssetType, TransactionType, Prisma } from "@prisma/client";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { put } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 import { DarfDocument } from "./darf-document";
+import { UnifiedDarfDocument } from "./unified-darf-document";
 
 type ActionResult = {
   success: boolean;
@@ -22,13 +24,11 @@ enum OperationType {
   CRIPTO_EXT = "CRIPTO_EXT",
 }
 
-export async function calculateTax(
+async function _calculateTaxForType(
+  userId: string,
   assetType: AssetType,
-): Promise<ActionResult> {
-  const { userId } = auth();
-  if (!userId) redirect("/login");
-
-  const now = new Date();
+  now: Date,
+) {
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
@@ -49,7 +49,12 @@ export async function calculateTax(
   });
 
   if (saleTransactions.length === 0) {
-    return { success: false, message: "Nenhuma venda encontrada este mês." };
+    return {
+      tax: new Prisma.Decimal(0),
+      codigoReceita: "",
+      valorPrincipal: "0,00",
+      message: "Nenhuma venda encontrada este mês.",
+    };
   }
 
   let totalSalesBrazil = 0;
@@ -148,14 +153,9 @@ export async function calculateTax(
       }
 
       if (taxBrazil > 0 && taxForeign > 0) {
-        return {
-          success: false,
-          message:
-            "Imposto devido em Cripto Nacional (Cód. 4600) e Exterior (Cód. 1889). Você deve gerar DARFs separados.",
-        };
-      }
-
-      if (taxForeign > 0) {
+        tax = taxBrazil + taxForeign;
+        codigoReceita = "4600/1889";
+      } else if (taxForeign > 0) {
         tax = taxForeign;
         codigoReceita = "1889";
       } else if (taxBrazil > 0) {
@@ -218,22 +218,181 @@ export async function calculateTax(
 
   if (tax <= 0) {
     return {
-      success: false,
-      message:
-        "Nenhum imposto devido. Você está dentro do limite de isenção ou seus lucros foram compensados por prejuízos.",
+      tax: new Prisma.Decimal(0),
+      codigoReceita: "",
+      valorPrincipal: "0,00",
+      message: "Nenhum imposto devido.",
     };
   }
 
-  if (!codigoReceita) {
-    return {
-      success: false,
-      message: "Erro interno: Código da receita não definido.",
+  return {
+    tax: new Prisma.Decimal(tax),
+    codigoReceita: codigoReceita,
+    valorPrincipal: tax.toFixed(2).replace(".", ","),
+    message: "Cálculo bem-sucedido.",
+  };
+}
+
+async function _generateOrUpdateUnifiedDarf(
+  userId: string,
+  year: number,
+  month: number,
+) {
+  const individualDarfs = await db.darf.findMany({
+    where: {
+      userId,
+      year,
+      month,
+      assetType: { in: [AssetType.ACAO, AssetType.FII, AssetType.CRIPTO] },
+    },
+  });
+
+  let totalTax = new Prisma.Decimal(0);
+  let acaoData = null;
+  let fiiData = null;
+  let criptoData = null;
+  const apuracao = `${String(month).padStart(2, "0")}/${year}`;
+
+  for (const darf of individualDarfs) {
+    totalTax = totalTax.plus(darf.taxDue);
+    const darfInfo = {
+      apuracao: apuracao,
+      valorPrincipal: darf.taxDue.toFixed(2).replace(".", ","),
+      codigoReceita: darf.codigoReceita || "N/A",
     };
+
+    if (darf.assetType === AssetType.ACAO) acaoData = darfInfo;
+    if (darf.assetType === AssetType.FII) fiiData = darfInfo;
+    if (darf.assetType === AssetType.CRIPTO) criptoData = darfInfo;
+  }
+
+  if (totalTax.lessThanOrEqualTo(0)) {
+    const oldUnified = await db.darf.findUnique({
+      where: {
+        userId_year_month_assetType: {
+          userId,
+          year,
+          month,
+          assetType: AssetType.UNIFICADA,
+        },
+      },
+    });
+    if (oldUnified) {
+      await del(oldUnified.pdfUrl);
+      await db.darf.delete({ where: { id: oldUnified.id } });
+    }
+    return;
   }
 
   const user = await clerkClient().users.getUser(userId);
-  const apuracao = `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
-  const vencimento = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+  const userName =
+    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Contribuinte";
+
+  const pdfBuffer = await renderToBuffer(
+    <UnifiedDarfDocument
+      userName={userName}
+      apuracao={apuracao}
+      acaoData={acaoData}
+      fiiData={fiiData}
+      criptoData={criptoData}
+      valorTotal={totalTax.toFixed(2).replace(".", ",")}
+    />,
+  );
+
+  const existingUnifiedDarf = await db.darf.findUnique({
+    where: {
+      userId_year_month_assetType: {
+        userId,
+        year,
+        month,
+        assetType: AssetType.UNIFICADA,
+      },
+    },
+    select: { pdfUrl: true },
+  });
+
+  if (existingUnifiedDarf) {
+    try {
+      await del(existingUnifiedDarf.pdfUrl);
+    } catch (error) {
+      console.warn(
+        "Falha ao deletar blob antigo (pode já ter sido limpo):",
+        error,
+      );
+    }
+  }
+
+  const fileName = `DARF-UNIFICADA-${userId}-${year}-${month}.pdf`;
+  const blob = await put(fileName, pdfBuffer, {
+    access: "public",
+    contentType: "application/pdf",
+    addRandomSuffix: true,
+  });
+
+  await db.darf.upsert({
+    where: {
+      userId_year_month_assetType: {
+        userId,
+        year,
+        month,
+        assetType: AssetType.UNIFICADA,
+      },
+    },
+    create: {
+      userId,
+      month,
+      year,
+      assetType: AssetType.UNIFICADA,
+      taxDue: totalTax,
+      pdfUrl: blob.url,
+      codigoReceita: "UNIFICADO",
+    },
+    update: {
+      taxDue: totalTax,
+      pdfUrl: blob.url,
+    },
+  });
+
+  console.log(`DARF Unificada atualizada para ${userId} - ${month}/${year}`);
+}
+
+export async function calculateTax(
+  assetType: AssetType,
+): Promise<ActionResult> {
+  const { userId } = auth();
+  if (!userId) redirect("/login");
+
+  const now = new Date();
+  const user = await clerkClient().users.getUser(userId);
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  const calcResult = await _calculateTaxForType(userId, assetType, now);
+
+  if (calcResult.tax.lessThanOrEqualTo(0)) {
+    const existingDarf = await db.darf.findUnique({
+      where: {
+        userId_year_month_assetType: { userId, year, month, assetType },
+      },
+    });
+    if (existingDarf) {
+      await del(existingDarf.pdfUrl);
+      await db.darf.delete({ where: { id: existingDarf.id } });
+    }
+    await _generateOrUpdateUnifiedDarf(userId, year, month);
+    return { success: false, message: calcResult.message };
+  }
+
+  if (calcResult.codigoReceita.includes("/")) {
+    return {
+      success: false,
+      message:
+        "Imposto devido em Cripto Nacional e Exterior. Esta action não pode gerar DARFs separadas. Use o 'Relatório Unificado' para consolidar.",
+    };
+  }
+
+  const apuracao = `${String(month).padStart(2, "0")}/${year}`;
+  const vencimento = new Date(year, month + 1, 0);
 
   const darfData = {
     userName:
@@ -241,49 +400,94 @@ export async function calculateTax(
     userCpf: (user.privateMetadata?.cpf as string) ?? "CPF não informado",
     apuracao,
     vencimento: vencimento.toLocaleDateString("pt-BR"),
-    valorPrincipal: tax.toFixed(2).replace(".", ","),
-    codigoReceita: codigoReceita,
+    valorPrincipal: calcResult.valorPrincipal,
+    codigoReceita: calcResult.codigoReceita,
   };
 
-  const fileName = `DARF-${codigoReceita}-${user.id}-${Date.now()}.pdf`;
+  const fileName = `DARF-${assetType}-${calcResult.codigoReceita}-${userId}.pdf`;
 
   try {
     const pdfBuffer = await renderToBuffer(<DarfDocument {...darfData} />);
 
+    const existingDarf = await db.darf.findUnique({
+      where: {
+        userId_year_month_assetType: { userId, year, month, assetType },
+      },
+      select: { pdfUrl: true },
+    });
+    if (existingDarf) {
+      await del(existingDarf.pdfUrl);
+    }
+
     const blob = await put(fileName, pdfBuffer, {
       access: "public",
       contentType: "application/pdf",
+      addRandomSuffix: true,
     });
-
-    const dataToSave = {
-      userId,
-      month: now.getMonth() + 1,
-      year: now.getFullYear(),
-      assetType,
-      taxDue: new Prisma.Decimal(tax),
-      pdfUrl: blob.url,
-      codigoReceita: codigoReceita,
-    };
 
     await db.darf.upsert({
       where: {
-        userId_year_month_assetType: {
-          userId,
-          year: now.getFullYear(),
-          month: now.getMonth() + 1,
-          assetType,
-        },
+        userId_year_month_assetType: { userId, year, month, assetType },
       },
-      update: dataToSave,
-      create: dataToSave,
+      create: {
+        userId,
+        month,
+        year,
+        assetType,
+        taxDue: calcResult.tax,
+        pdfUrl: blob.url,
+        codigoReceita: calcResult.codigoReceita,
+      },
+      update: {
+        taxDue: calcResult.tax,
+        pdfUrl: blob.url,
+        codigoReceita: calcResult.codigoReceita,
+      },
     });
-  } catch (error) {
-    console.error("ERRO AO GERAR/SALVAR DARF:", error);
-    return { success: false, message: "Falha ao gerar e salvar o PDF." };
+
+    await _generateOrUpdateUnifiedDarf(userId, year, month);
+  } catch (error: unknown) {
+    // <-- CORRIGIDO AQUI
+    console.error("ERRO AO GERAR/SALVAR DARF INDIVIDUAL:", error);
+
+    let errorMessage = "Falha ao gerar e salvar o PDF.";
+    if (error instanceof Error) {
+      errorMessage = `Falha ao salvar DARF individual: ${error.message}`;
+    }
+
+    return { success: false, message: errorMessage };
   }
 
   return {
     success: true,
-    message: `DARF (Cód. ${codigoReceita}) gerado e salvo com sucesso!`,
+    message: `DARF (Cód. ${calcResult.codigoReceita}) gerado e Relatório Unificado atualizado!`,
   };
+}
+
+export async function calculateUnifiedDarf(): Promise<ActionResult> {
+  const { userId } = auth();
+  if (!userId) redirect("/login");
+
+  try {
+    await calculateTax(AssetType.ACAO);
+    await calculateTax(AssetType.FII);
+    await calculateTax(AssetType.CRIPTO);
+
+    return {
+      success: true,
+      message: "Relatório Mensal Unificado gerado/atualizado com sucesso!",
+    };
+  } catch (error: unknown) {
+    console.error("ERRO AO GERAR DARF UNIFICADO:", error);
+
+    let errorMessage = "Falha ao gerar o relatório unificado.";
+    if (error instanceof Error) {
+      errorMessage = `Falha ao gerar o relatório unificado: ${error.message}`;
+    }
+
+    return {
+      success: false,
+      message: errorMessage,
+    };
+  }
 }

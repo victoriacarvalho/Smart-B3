@@ -1,3 +1,4 @@
+// app/calculation/page.tsx
 import { auth } from "@clerk/nextjs/server";
 import Navbar from "../_components/navbar";
 import {
@@ -6,10 +7,11 @@ import {
   CardFooter,
   CardHeader,
 } from "../_components/ui/card";
-import { CheckIcon, XIcon } from "lucide-react";
+import { CheckIcon, XIcon, FileText } from "lucide-react"; // Importe FileText
 import { redirect } from "next/navigation";
 import { AssetType } from "@prisma/client";
 import TaxCalculatorButton from "./_components/calculation-button";
+import UnifiedTaxCalculatorButton from "./_components/unified-calculation-button";
 
 const SubscriptionPage = async () => {
   const { userId } = await auth();
@@ -24,6 +26,7 @@ const SubscriptionPage = async () => {
         <h1 className="text-2xl font-bold">Cálculo de impostos</h1>
 
         <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-stretch lg:justify-center">
+          {/* Card Cripto */}
           <Card className="flex w-full max-w-sm flex-col justify-between">
             <div>
               <CardHeader className="mb-4 border-b border-solid py-8 text-center">
@@ -65,6 +68,7 @@ const SubscriptionPage = async () => {
             </CardFooter>
           </Card>
 
+          {/* Card Ação */}
           <Card className="flex w-full max-w-sm flex-col justify-between">
             <div>
               <CardHeader className="mb-4 border-b border-solid py-8 text-center">
@@ -94,6 +98,7 @@ const SubscriptionPage = async () => {
             </CardFooter>
           </Card>
 
+          {/* Card FII */}
           <Card className="flex w-full max-w-sm flex-col justify-between">
             <div>
               <CardHeader className="mb-4 border-b border-solid py-8 text-center">
@@ -128,6 +133,33 @@ const SubscriptionPage = async () => {
             </div>
             <CardFooter>
               <TaxCalculatorButton assetType={AssetType.FII} />{" "}
+            </CardFooter>
+          </Card>
+
+          {/* Card Unificado (Destaque) */}
+          <Card className="flex w-full max-w-sm flex-col justify-between border-2 border-primary">
+            <div>
+              <CardHeader className="mb-4 border-b border-solid py-8 text-center">
+                <h2 className="text-xl font-semibold">
+                  Relatório Mensal Unificado
+                </h2>
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <FileText className="h-12 w-12 text-primary" />
+                  <span className="text-4xl font-bold">Todos os Ativos</span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                <div className="flex items-start gap-3">
+                  <CheckIcon className="text-primary" />
+                  <p>
+                    Gera um <b>único PDF</b> contendo o cálculo separado de
+                    Ações, FIIs e Criptomoedas para o mês atual.
+                  </p>
+                </div>
+              </CardContent>
+            </div>
+            <CardFooter>
+              <UnifiedTaxCalculatorButton />
             </CardFooter>
           </Card>
         </div>

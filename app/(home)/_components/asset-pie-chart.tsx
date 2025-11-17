@@ -1,3 +1,4 @@
+// app/(home)/_components/asset-pie-chart.tsx
 "use client";
 
 import { Pie, PieChart } from "recharts";
@@ -44,11 +45,35 @@ interface AssetPieChartProps {
   portfolioAllocation: PortfolioAllocation[];
 }
 
+// --- INÍCIO DA CORREÇÃO ---
+
+// 1. Defina os tipos válidos como 'const'
+const VALID_CHART_TYPES = [
+  AssetType.ACAO,
+  AssetType.FII,
+  AssetType.CRIPTO,
+] as const;
+
+// 2. Crie um tipo a partir desses valores
+type ValidChartAssetType = (typeof VALID_CHART_TYPES)[number];
+
+// 3. Crie uma função "type guard"
+function isChartableAsset(type: AssetType): type is ValidChartAssetType {
+  return (VALID_CHART_TYPES as readonly AssetType[]).includes(type);
+}
+// --- FIM DA CORREÇÃO ---
+
 const AssetPieChart = ({ portfolioAllocation = [] }: AssetPieChartProps) => {
   const chartData = portfolioAllocation
-    .filter((item) => item.value > 0)
+    // 4. Use o type guard no filter
+    .filter(
+      (item): item is PortfolioAllocation & { type: ValidChartAssetType } =>
+        item.value > 0 && isChartableAsset(item.type),
+    )
     .map((item) => ({
       ...item,
+      // 'item.type' agora está corretamente estreitado para
+      // "ACAO" | "FII" | "CRIPTO", então não há erro aqui.
       fill: ASSET_TYPE_COLORS[item.type],
     }));
 
@@ -91,6 +116,7 @@ const AssetPieChart = ({ portfolioAllocation = [] }: AssetPieChartProps) => {
                   <div className="flex items-center gap-2">
                     <AssetTypeIcon type={item.type} className="h-4 w-4" />
                     <span className="font-medium">
+                      {/* 5. 'item.type' está correto, então não há erro aqui */}
                       {chartConfig[item.type].label}
                     </span>
                   </div>
