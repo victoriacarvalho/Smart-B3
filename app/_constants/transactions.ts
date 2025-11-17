@@ -20,7 +20,6 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
 export const OPERATION_TYPE_LABELS: Record<OperationType, string> = {
   [OperationType.SWING_TRADE]: "Swing Trade",
   [OperationType.DAY_TRADE]: "Day Trade",
-  [OperationType.DISCOVERY_SALE]: "Venda a descoberto",
 };
 
 export const TRANSACTION_TYPE_OPTIONS = [
@@ -61,7 +60,6 @@ export const OPERATION_TYPE_OPTIONS = [
 ];
 
 export const RETENTION_PERIOD_LABELS: Record<RetentionPeriod, string> = {
-  // Tipagem explícita
   [RetentionPeriod.CURTO_PRAZO]: "Curto Prazo (Menos de 1 ano)",
   [RetentionPeriod.LONGO_PRAZO]: "Longo Prazo (1 ano ou mais)",
 };

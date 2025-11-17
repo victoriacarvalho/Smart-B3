@@ -136,7 +136,6 @@ enum TransactionType {
 enum OperationType {
   SWING_TRADE
   DAY_TRADE
-  DISCOVERY_SALE
 }
 
 enum RetentionPeriod {
