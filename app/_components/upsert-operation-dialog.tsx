@@ -4,12 +4,11 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AssetType, OperationType, TransactionType } from "@prisma/client";
+import { AssetType } from "@prisma/client";
 import { NumericFormat } from "react-number-format";
 
 import {
   OPERATION_TYPE_OPTIONS,
-  RetentionPeriod,
   RETENTION_PERIOD_OPTIONS,
   TRANSACTION_TYPE_OPTIONS,
 } from "../_constants/transactions";
@@ -43,8 +42,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { upsertTransactionSchema as formSchema } from "@/app/_actions/schema";
 
-// Opções para o seletor de local da corretora
 const BROKERAGE_LOCATION_OPTIONS = [
   { value: "false", label: "Nacional (Brasil)" },
   { value: "true", label: "Estrangeira (Exterior)" },
@@ -58,59 +57,6 @@ interface ActiveAssetInfo {
   apiId?: string | null;
 }
 
-const formSchema = z
-  .object({
-    id: z.string().cuid().optional(),
-    assetId: z.string().cuid("ID do ativo inválido."),
-    assetType: z.nativeEnum(AssetType),
-    type: z.nativeEnum(TransactionType, {
-      message: "O tipo (Compra/Venda) é obrigatório.",
-    }),
-    quantity: z
-      .number({
-        message: "A quantidade é obrigatória.",
-      })
-      .positive({
-        message: "A quantidade deve ser positiva.",
-      }),
-    unitPrice: z
-      .number({ message: "Preço unitário deve ser um número." })
-      .positive("O preço unitário deve ser maior que zero."),
-    date: z.date({ message: "A data é obrigatória." }),
-    operationType: z.nativeEnum(OperationType).optional(),
-    retentionPeriod: z.nativeEnum(RetentionPeriod).optional(),
-    isForeign: z.boolean().optional(), // Campo para local da corretora
-  })
-  .superRefine((data, ctx) => {
-    if (
-      (data.assetType === AssetType.ACAO ||
-        data.assetType === AssetType.CRIPTO) &&
-      !data.operationType
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "O tipo de operação (Swing/Day Trade) é obrigatório.",
-        path: ["operationType"],
-      });
-    }
-
-    if (data.assetType === AssetType.FII && !data.retentionPeriod) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "O prazo de retenção (Curto/Longo) é obrigatório.",
-        path: ["retentionPeriod"],
-      });
-    }
-
-    if (data.assetType === AssetType.CRIPTO && data.isForeign === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Informe se a corretora é nacional ou estrangeira.",
-        path: ["isForeign"],
-      });
-    }
-  });
-
 // --- Props ---
 interface UpsertOperationDialogProps {
   isOpen: boolean;
@@ -121,7 +67,6 @@ interface UpsertOperationDialogProps {
   defaultValues?: Partial<z.infer<typeof formSchema>>;
 }
 
-// --- Componente ---
 const UpsertOperationDialog = ({
   isOpen,
   setIsOpen,
@@ -147,7 +92,6 @@ const UpsertOperationDialog = ({
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
 
   useEffect(() => {
-    // Não busca preço se for uma edição, para não sobrescrever o valor histórico
     if (operationId) return;
 
     const identifier =
@@ -178,6 +122,10 @@ const UpsertOperationDialog = ({
         })
       : null;
 
+  const handleFormSubmit = (data: z.input<typeof formSchema>) => {
+    onSubmit(data as z.infer<typeof formSchema>);
+  };
+
   return (
     <Dialog
       open={isOpen}
@@ -201,7 +149,11 @@ const UpsertOperationDialog = ({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(handleFormSubmit)}
+            className="space-y-4"
+          >
+            {" "}
             {/* Tipo e Data */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
@@ -243,7 +195,6 @@ const UpsertOperationDialog = ({
                 )}
               />
             </div>
-
             {/* Quantidade e Preço Unitário */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
@@ -298,7 +249,26 @@ const UpsertOperationDialog = ({
                 )}
               />
             </div>
-
+            {/* 👇 ADICIONE ESTE BLOCO NOVO 👇 */}
+            <FormField
+              control={form.control}
+              name="fees"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Taxas (R$)</FormLabel>
+                  <FormControl>
+                    <MoneyInput
+                      placeholder="R$ 0,00"
+                      value={field.value ?? ""}
+                      onValueChange={({ floatValue }) =>
+                        field.onChange(floatValue)
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             {/* Total */}
             {estimatedTotal && !isFetchingPrice && (
               <div className="rounded-md border bg-muted p-3 text-sm">
@@ -312,7 +282,6 @@ const UpsertOperationDialog = ({
                 </span>
               </div>
             )}
-
             {/* Campos Condicionais */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {(assetInfo.type === AssetType.ACAO ||
@@ -349,7 +318,7 @@ const UpsertOperationDialog = ({
               {assetInfo.type === AssetType.CRIPTO && (
                 <FormField
                   control={form.control}
-                  name="isForeign"
+                  name="isForeignExchange"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Local da Corretora</FormLabel>
@@ -410,7 +379,6 @@ const UpsertOperationDialog = ({
                 />
               )}
             </div>
-
             {/* Botões */}
             <DialogFooter className="pt-4">
               <DialogClose asChild>
