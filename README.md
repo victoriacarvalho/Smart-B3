@@ -45,7 +45,7 @@ O `schema.prisma` define a estrutura central da aplicação:
 
 1.  **Clone o repositório:**
     ```bash
-    git clone https://github.com/victoriacarvalho/fp
+    git clone https://github.com/victoriacarvalho/Smart-B3
     cd smart-b3
     ```
 
