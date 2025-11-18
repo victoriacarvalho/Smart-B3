@@ -11,6 +11,7 @@ import {
   RetentionPeriod,
 } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
+import { redirect } from "next/navigation";
 
 const idSchema = z.object({ id: z.string().cuid("ID inválido.") });
 
@@ -459,4 +460,19 @@ export const deletePortfolio = async (params: z.infer<typeof idSchema>) => {
 
   revalidatePath("/");
   return { success: true };
+};
+
+export const deleteUserAccount = async () => {
+  const { userId } = auth();
+  if (!userId) {
+    throw new Error("Não autorizado.");
+  }
+  try {
+    await clerkClient().users.deleteUser(userId);
+    return { success: true, message: "Sua conta foi marcada para exclusão." };
+    redirect("/login");
+  } catch (error) {
+    console.error("Erro ao deletar usuário do Clerk:", error);
+    throw new Error("Falha ao iniciar a exclusão da conta.");
+  }
 };

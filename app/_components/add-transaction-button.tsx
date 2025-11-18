@@ -24,6 +24,7 @@ import {
 } from "./ui/select";
 import { AssetSearch } from "./asset-search";
 import UpsertOperationDialog from "./upsert-operation-dialog";
+import { toast } from "sonner";
 
 type SearchResult = {
   symbol: string;
@@ -61,18 +62,6 @@ export function AddTransactionDialog() {
     setIsFindingAsset(true);
     startTransition(async () => {
       try {
-        const portfolioResponse = await fetch("/api/portfolio");
-        if (!portfolioResponse.ok) {
-          throw new Error("Falha ao obter a carteira do usuário.");
-        }
-
-        const portfolios = await portfolioResponse.json();
-        const portfolioId = portfolios[0]?.id;
-
-        if (!portfolioId) {
-          throw new Error("Não foi possível identificar a carteira principal.");
-        }
-
         const dbAsset = await findOrCreateAsset({
           symbol: (asset as any).apiId || asset.symbol,
           type: selectedAssetType,
@@ -87,6 +76,7 @@ export function AddTransactionDialog() {
         });
       } catch (error) {
         console.error("Erro no fluxo de seleção de ativo:", error);
+        toast.error("Erro ao selecionar o ativo. Tente novamente.");
       } finally {
         setIsFindingAsset(false);
       }
@@ -105,6 +95,7 @@ export function AddTransactionDialog() {
         handleReset();
       } catch (error) {
         console.error("Erro ao salvar transação:", error);
+        toast.error("Erro ao salvar a transação. Tente novamente.");
       }
     });
   };

@@ -1,5 +1,4 @@
-// app/notifications/page.tsx
-"use client"; // Necessário para usar hooks como useState
+"use client";
 
 import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
@@ -19,22 +18,25 @@ import {
 } from "../_components/ui/sheet";
 import { useUser } from "@clerk/nextjs";
 import { PoliticaDePrivacidade } from "./_components/privacy";
-import { updateUserWhatsappInfo } from "../_actions";
+import { updateUserWhatsappInfo } from "./_actions";
+import { DeleteAccountDialog } from "./_components/delete-account-dialog";
+import { Separator } from "@/app/_components/ui/separator";
 
 const NotificationPage = () => {
   const [isPending, startTransition] = useTransition();
   const { user } = useUser();
 
-  const [name, setName] = useState(user?.fullName || "");
-  const [phone, setPhone] = useState(
-    user?.primaryPhoneNumber?.phoneNumber || "",
-  );
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
-    if (user?.fullName) setName(user.fullName);
-    if (user?.primaryPhoneNumber?.phoneNumber)
+    if (user?.fullName) {
+      setName(user.fullName);
+    }
+    if (user?.primaryPhoneNumber?.phoneNumber) {
       setPhone(user.primaryPhoneNumber.phoneNumber);
-  }, [user]);
+    }
+  }, [user, setName, setPhone]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,14 +103,14 @@ const NotificationPage = () => {
 
               <SheetFooter className="gap-2">
                 <Button type="submit" disabled={isPending}>
-                  {isPending ? "Enviando..." : "Salvar "}
+                  {isPending ? "Enviando..." : "Salvar"}
                 </Button>
                 <SheetClose asChild>
                   <Button
                     type="button"
                     variant="outline"
                     disabled={isPending}
-                    className="space-y-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                   >
                     Cancelar
                   </Button>
@@ -120,6 +122,17 @@ const NotificationPage = () => {
 
         <div className="w-full max-w-4xl">
           <PoliticaDePrivacidade />
+        </div>
+
+        {/* Seção de Exclusão de Conta */}
+        <Separator className="w-full max-w-4xl" />
+        <div className="w-full max-w-4xl space-y-4 rounded-lg border border-destructive bg-destructive/5 p-6">
+          <h2 className="text-xl font-bold text-destructive">Zona de Perigo</h2>
+          <p className="text-sm text-muted-foreground">
+            Uma vez que você exclui sua conta, não há como voltar atrás. Tenha
+            certeza absoluta antes de prosseguir.
+          </p>
+          <DeleteAccountDialog />
         </div>
       </div>
     </>
