@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/app/_components/ui/select";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 const MONTH_OPTIONS = [
   { value: "01", label: "Janeiro" },
@@ -27,10 +27,18 @@ const MONTH_OPTIONS = [
 const TimeSelect = () => {
   const { push } = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+
   const month = searchParams.get("month");
+
   const handleMonthChange = (month: string) => {
-    push(`/?month=${month}`);
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.set("month", month);
+
+    push(`${pathname}?${params.toString()}`);
   };
+
   return (
     <Select
       onValueChange={(value) => handleMonthChange(value)}
