@@ -1,8 +1,9 @@
-// app/api/cron/send-notifications/route.ts
-
 import { NextResponse } from "next/server";
 import { db } from "@/app/_lib/prisma";
-import { sendMonthlyNotification } from "@/app/_actions";
+import { sendMonthlyNotification } from "@/app/notifications/_actions";
+import { calculateTaxForCron } from "@/app/calculation/_actions/calculates-taxes";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -22,29 +23,47 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Nenhum usuário para notificar." });
     }
 
-    const currentMonth = new Date().toLocaleString("pt-BR", {
-      month: "long",
-      timeZone: "America/Sao_Paulo",
-    });
-    const monthName =
-      currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
+    const today = new Date();
+    const lastMonthDate = new Date(
+      today.getFullYear(),
+      today.getMonth() - 1,
+      1,
+    );
+    const monthName = lastMonthDate.toLocaleString("pt-BR", { month: "long" });
+    const capitalizedMonth =
+      monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
-    const promises = usersToNotify.map((user) =>
-      sendMonthlyNotification(
-        user.phoneNumber!,
-        user.name ?? "Usuário",
-        monthName,
-      ),
+    console.log(
+      `Iniciando Cron para ${usersToNotify.length} usuários. Mês: ${capitalizedMonth}`,
     );
 
-    await Promise.allSettled(promises);
+    const results = await Promise.allSettled(
+      usersToNotify.map(async (user) => {
+        if (!user.phoneNumber) return;
+
+        const pdfUrl = await calculateTaxForCron(user.id);
+
+        if (pdfUrl) {
+          await sendMonthlyNotification(
+            user.phoneNumber,
+            user.name ?? "Investidor",
+            capitalizedMonth,
+            pdfUrl,
+          );
+          return `Enviado com DARF para ${user.email}`;
+        } else {
+          return `Sem imposto devido para ${user.email}`;
+        }
+      }),
+    );
 
     return NextResponse.json({
       success: true,
-      message: `Notificações enviadas para ${usersToNotify.length} usuários.`,
+      processed: results.length,
+      details: results,
     });
   } catch (error) {
-    console.error("Erro no Cron Job de notificação:", error);
+    console.error("Erro fatal no Cron Job:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

@@ -75,7 +75,9 @@ const NotificationPage = () => {
                 <SheetTitle>Insira suas informações</SheetTitle>
                 <SheetDescription>
                   Ao salvar, você concorda com nossa política de privacidade e
-                  receberá uma mensagem de teste.
+                  receberá uma mensagem de teste. Para receber mensalmente seu
+                  relatório fiscal via WhatsApp, responda nosso BOT para
+                  confirmar
                 </SheetDescription>
               </SheetHeader>
               <div className="grid flex-1 auto-rows-min gap-6 px-4 py-4">

@@ -7,6 +7,7 @@ import { ScrollArea, ScrollBar } from "../_components/ui/scroll-area";
 import { AddTransactionDialog } from "../_components/add-transaction-button";
 import { DataTable } from "../_components/ui/data-table";
 import { AssetType, Prisma } from "@prisma/client";
+import TimeSelect from "../(home)/_components/time-select";
 
 const validAssetTypes: AssetType[] = [
   AssetType.ACAO,
@@ -72,6 +73,7 @@ const TransactionsPage = async ({
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
           <h1 className="text-xl font-bold sm:text-2xl">{pageTitle}</h1>
           <AddTransactionDialog />
+          <TimeSelect />
         </div>
         <div className="relative flex-1">
           <ScrollArea className="absolute inset-0">

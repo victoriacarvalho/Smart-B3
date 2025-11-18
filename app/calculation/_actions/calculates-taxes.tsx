@@ -29,7 +29,7 @@ async function _calculateTaxForType(
   assetType: AssetType,
   now: Date,
 ) {
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   const saleTransactions = await db.transaction.findMany({
@@ -447,7 +447,6 @@ export async function calculateTax(
 
     await _generateOrUpdateUnifiedDarf(userId, year, month);
   } catch (error: unknown) {
-    // <-- CORRIGIDO AQUI
     console.error("ERRO AO GERAR/SALVAR DARF INDIVIDUAL:", error);
 
     let errorMessage = "Falha ao gerar e salvar o PDF.";
@@ -489,5 +488,59 @@ export async function calculateUnifiedDarf(): Promise<ActionResult> {
       success: false,
       message: errorMessage,
     };
+  }
+}
+
+export async function calculateTaxForCron(userId: string) {
+  const now = new Date();
+  const referenceDate = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const year = referenceDate.getFullYear();
+  const month = referenceDate.getMonth() + 1;
+
+  try {
+    const acaoResult = await _calculateTaxForType(
+      userId,
+      AssetType.ACAO,
+      referenceDate,
+    );
+    const fiiResult = await _calculateTaxForType(
+      userId,
+      AssetType.FII,
+      referenceDate,
+    );
+    const criptoResult = await _calculateTaxForType(
+      userId,
+      AssetType.CRIPTO,
+      referenceDate,
+    );
+
+    const totalTax = acaoResult.tax.plus(fiiResult.tax).plus(criptoResult.tax);
+
+    if (totalTax.lessThanOrEqualTo(0)) {
+      return null;
+    }
+
+    await _generateOrUpdateUnifiedDarf(userId, year, month);
+
+    const unifiedDarf = await db.darf.findUnique({
+      where: {
+        userId_year_month_assetType: {
+          userId,
+          year,
+          month,
+          assetType: AssetType.UNIFICADA,
+        },
+      },
+      select: { pdfUrl: true },
+    });
+
+    return unifiedDarf?.pdfUrl || null;
+  } catch (error) {
+    console.error(
+      `Erro ao calcular imposto via Cron para user ${userId}:`,
+      error,
+    );
+    return null;
   }
 }

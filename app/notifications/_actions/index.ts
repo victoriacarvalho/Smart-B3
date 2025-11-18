@@ -113,6 +113,7 @@ export async function sendMonthlyNotification(
   to: string,
   name: string,
   month: string,
+  pdfLink?: string,
 ) {
   const { WHATSAPP_API_TOKEN, WHATSAPP_PHONE_NUMBER_ID } = process.env;
 
@@ -121,10 +122,11 @@ export async function sendMonthlyNotification(
   }
 
   const url = `https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const sanitizedTo = to.replace(/\D/g, "");
 
   const payload = {
     messaging_product: "whatsapp",
-    to: to.replace(/\D/g, ""),
+    to: sanitizedTo,
     type: "template",
     template: {
       name: "monthly_tax_report",
@@ -156,6 +158,35 @@ export async function sendMonthlyNotification(
     const errorData = await response.json();
     console.error(`Falha ao enviar para ${to}:`, errorData.error.message);
   } else {
-    console.log(`Notificação enviada com sucesso para ${to}`);
+    console.log(`Notificação de texto enviada com sucesso para ${to}`);
+  }
+
+  if (pdfLink) {
+    const linkPayload = {
+      messaging_product: "whatsapp",
+      to: sanitizedTo,
+      type: "text",
+      text: {
+        body: `📄 Aqui está o seu DARF unificado para pagamento: ${pdfLink}`,
+      },
+    };
+
+    const linkResponse = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${WHATSAPP_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(linkPayload),
+    });
+
+    if (!linkResponse.ok) {
+      console.error(
+        `Falha ao enviar link do PDF para ${to}:`,
+        await linkResponse.json(),
+      );
+    } else {
+      console.log(`Link do PDF enviado com sucesso para ${to}`);
+    }
   }
 }
