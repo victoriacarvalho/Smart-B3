@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { useClerk } from "@clerk/nextjs";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -31,7 +30,8 @@ export function DeleteAccountDialog() {
         toast.success("Sua conta foi excluída. Você será desconectado.");
         setIsOpen(false);
 
-        await signOut(() => router.push("/"));
+        // CORREÇÃO AQUI: Redireciona explicitamente para /login após o logout
+        await signOut(() => router.push("/login"));
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : "Erro desconhecido.",
@@ -45,7 +45,6 @@ export function DeleteAccountDialog() {
       <AlertDialogTrigger asChild>
         <Button
           variant="destructive"
-          color="red-500"
           className="w-full max-w-sm hover:bg-red-500/90"
         >
           Excluir Conta Permanentemente
@@ -62,14 +61,14 @@ export function DeleteAccountDialog() {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            asChild
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isPending}
             className="bg-destructive hover:bg-red-500/90"
           >
-            <Button onClick={handleDelete} disabled={isPending}>
-              {isPending ? "Excluindo..." : "Sim, excluir minha conta"}
-            </Button>
-          </AlertDialogAction>
+            {isPending ? "Excluindo..." : "Sim, excluir minha conta"}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

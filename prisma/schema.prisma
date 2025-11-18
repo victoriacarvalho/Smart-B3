@@ -12,7 +12,7 @@ model User {
   email           String          @unique
   name            String?
   imageUrl        String?
-  phoneNumber     String?         @unique
+  phoneNumber     String?         
   whatsappConsent Boolean         @default(false)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt

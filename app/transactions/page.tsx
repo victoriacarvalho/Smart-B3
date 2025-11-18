@@ -1,48 +1,48 @@
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/app/_lib/prisma";
+import { DataTable } from "@/app/_components/ui/data-table";
 import { transactionColumns } from "./_columns";
-import { redirect } from "next/navigation";
-import Navbar from "../_components/navbar";
-import { ScrollArea, ScrollBar } from "../_components/ui/scroll-area";
 import { AddTransactionDialog } from "../_components/add-transaction-button";
-import { DataTable } from "../_components/ui/data-table";
-import { AssetType, Prisma } from "@prisma/client";
+import Navbar from "../_components/navbar";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { ScrollArea } from "../_components/ui/scroll-area";
 import TimeSelect from "../(home)/_components/time-select";
-
-const validAssetTypes: AssetType[] = [
-  AssetType.ACAO,
-  AssetType.FII,
-  AssetType.CRIPTO,
-];
-
-const TransactionsPage = async ({
-  searchParams,
-}: {
-  searchParams?: { type?: string };
-}) => {
-  const { userId } = auth();
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  const assetType = searchParams?.type?.toUpperCase();
-  const isValidAssetType =
-    assetType && validAssetTypes.includes(assetType as AssetType);
-
-  const whereClause: Prisma.TransactionWhereInput = {
-    asset: {
-      portfolio: {
-        userId: userId,
-      },
-    },
+interface TransactionsPageProps {
+  searchParams: {
+    month?: string;
+    year?: string;
   };
+}
 
-  if (isValidAssetType) {
-    whereClause.asset!.type = assetType as AssetType;
+const TransactionsPage = async ({ searchParams }: TransactionsPageProps) => {
+  const { userId } = auth();
+
+  if (!userId) {
+    redirect("/login");
   }
+
+  const month = searchParams.month
+    ? parseInt(searchParams.month)
+    : new Date().getMonth() + 1;
+  const year = searchParams.year
+    ? parseInt(searchParams.year)
+    : new Date().getFullYear();
+
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59);
 
   const transactions = await db.transaction.findMany({
-    where: whereClause,
+    where: {
+      asset: {
+        portfolio: {
+          userId: userId,
+        },
+      },
+      date: {
+        gte: startDate,
+        lte: endDate,
+      },
+    },
     include: {
       asset: {
         select: {
@@ -56,38 +56,27 @@ const TransactionsPage = async ({
     },
   });
 
-  const assetTypeNames: Record<string, string> = {
-    ACAO: "Ações",
-    FII: "FIIs",
-    CRIPTO: "Criptos",
-  };
-
-  const pageTitle = isValidAssetType
-    ? `Transações - ${assetTypeNames[assetType]}`
-    : "Transações";
-
   return (
-    <div className="flex h-screen flex-col">
+    <>
       <Navbar />
-      <main className="flex flex-1 flex-col gap-4 overflow-hidden p-4 md:p-6">
-        <div className="flex w-full flex-wrap items-center justify-between gap-2">
-          <h1 className="text-xl font-bold sm:text-2xl">{pageTitle}</h1>
-          <AddTransactionDialog />
-          <TimeSelect />
+      <div className="flex h-full flex-col space-y-6 overflow-hidden p-6">
+        <div className="flex w-full items-center justify-between">
+          <h1 className="text-2xl font-bold">Transações</h1>
+
+          <div className="flex items-center gap-3">
+            <TimeSelect />
+            <AddTransactionDialog />
+          </div>
         </div>
-        <div className="relative flex-1">
-          <ScrollArea className="absolute inset-0">
-            <div className="min-w-max p-1">
-              <DataTable
-                columns={transactionColumns}
-                data={JSON.parse(JSON.stringify(transactions))}
-              />
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </div>
-      </main>
-    </div>
+
+        <ScrollArea className="h-full">
+          <DataTable
+            columns={transactionColumns}
+            data={JSON.parse(JSON.stringify(transactions))}
+          />
+        </ScrollArea>
+      </div>
+    </>
   );
 };
 
