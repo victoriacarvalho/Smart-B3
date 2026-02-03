@@ -15,6 +15,7 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
 export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   [TransactionType.COMPRA]: "Compra",
   [TransactionType.VENDA]: "Venda",
+  [TransactionType.RENDIMENTO]: "Rendimento",
 };
 
 export const OPERATION_TYPE_LABELS: Record<OperationType, string> = {

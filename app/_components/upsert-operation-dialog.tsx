@@ -169,7 +169,7 @@ const UpsertOperationDialog = ({
         if (type) {
            const formattedType = type.toUpperCase();
            if (formattedType === "COMPRA" || formattedType === "VENDA") {
-             form.setValue("type", formattedType as any);
+             form.setValue("type", formattedType as never);
            }
         }
 
