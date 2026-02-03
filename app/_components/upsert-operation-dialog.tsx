@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AssetType } from "@prisma/client";
 import { NumericFormat } from "react-number-format";
+import { scanReceipt } from "@/app/_actions/scan-receipt"; 
+import { Loader2, ScanLine } from "lucide-react";
+import { toast } from "sonner"; 
 
 import {
   OPERATION_TYPE_OPTIONS,
@@ -126,6 +129,63 @@ const UpsertOperationDialog = ({
     onSubmit(data as z.infer<typeof formSchema>);
   };
 
+
+  const [isScanning, setIsScanning] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    
+ 
+    toast.info("Lendo comprovante com IA..."); 
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+    
+      const result = await scanReceipt(formData);
+
+      if (result.success && result.data) {
+        const { date, quantity, unitPrice, fees, type, symbol } = result.data;
+
+        if (symbol && assetInfo.symbol && symbol.toUpperCase() !== assetInfo.symbol.toUpperCase()) {
+          const confirm = window.confirm(`O comprovante parece ser de ${symbol}, mas você está em ${assetInfo.symbol}. Deseja preencher mesmo assim?`);
+          if (!confirm) {
+            setIsScanning(false);
+            return;
+          }
+        }
+
+        if (date) form.setValue("date", new Date(date));
+        
+        if (quantity) form.setValue("quantity", Number(quantity));
+        if (unitPrice) form.setValue("unitPrice", Number(unitPrice));
+        if (fees) form.setValue("fees", Number(fees));
+        
+        if (type) {
+           const formattedType = type.toUpperCase();
+           if (formattedType === "COMPRA" || formattedType === "VENDA") {
+             form.setValue("type", formattedType as any);
+           }
+        }
+
+        toast.success("Dados preenchidos! Verifique antes de salvar.");
+        
+      } else {
+        toast.error("Não foi possível ler os dados do comprovante. Tente uma imagem mais nítida.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao processar o arquivo.");
+    } finally {
+      setIsScanning(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
   return (
     <Dialog
       open={isOpen}
@@ -147,6 +207,44 @@ const UpsertOperationDialog = ({
             {assetInfo.name} ({assetInfo.type})
           </DialogDescription>
         </DialogHeader>
+
+        {!operationId && (
+          <div className="mb-6">
+             <input
+              type="file"
+              accept=".pdf,image/*"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleReceiptUpload}
+            />
+            
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-auto py-4 flex flex-col gap-2 border-dashed border-2 hover:bg-muted/50"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isScanning}
+            >
+              {isScanning ? (
+                <>
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="text-sm font-medium">Analisando comprovante...</span>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 text-primary">
+                    <ScanLine className="h-5 w-5" />
+                    <span className="font-semibold">Preenchimento Automático com IA</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-normal">
+                    Clique para enviar PDF ou Imagem do comprovante
+                  </span>
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+       
 
         <Form {...form}>
           <form
