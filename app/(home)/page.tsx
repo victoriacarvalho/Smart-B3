@@ -11,7 +11,6 @@ import AssetAllocationCard from "./_components/asset-alocation-card";
 import MarketMoversCard from "./_components/market-movers-card";
 import LastTransactionsCard from "./_components/last-transactions-card";
 import { PortfolioHealth } from "./_components/portfolio-health";
-import { AssetType } from "@prisma/client";
 
 interface HomeProps {
   searchParams: {
