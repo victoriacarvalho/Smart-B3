@@ -133,11 +133,11 @@ async function recalculateMonthlyResults(
       year,
       month,
       assetType,
-      operationType: OperationType.SWING_TRADE, // Simplificado
+      operationType: OperationType.SWING_TRADE, 
       totalSold,
       netProfit,
       taxDue,
-      accumulatedLoss: new Decimal(0), // Placeholder
+      accumulatedLoss: new Decimal(0), 
       taxBase: netProfit.isPositive() ? netProfit : new Decimal(0),
     });
   }
@@ -231,8 +231,9 @@ export const upsertTransaction = async (
     transactionDate.getUTCMonth() + 1,
   );
 
+  revalidatePath("/"); 
   revalidatePath("/transactions");
-  revalidatePath("/");
+  revalidatePath("/reports");
   return { success: true };
 };
 

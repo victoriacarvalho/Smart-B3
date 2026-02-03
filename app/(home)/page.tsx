@@ -10,6 +10,8 @@ import AssetPieChart from "./_components/asset-pie-chart";
 import AssetAllocationCard from "./_components/asset-alocation-card";
 import MarketMoversCard from "./_components/market-movers-card";
 import LastTransactionsCard from "./_components/last-transactions-card";
+import { PortfolioHealth } from "./_components/portfolio-health";
+import { AssetType } from "@prisma/client";
 
 interface HomeProps {
   searchParams: {
@@ -28,9 +30,7 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
   const currentMonth = new Date().getMonth() + 1;
 
   const year = searchParams.year ? parseInt(searchParams.year) : currentYear;
-  const month = searchParams.month
-    ? parseInt(searchParams.month)
-    : currentMonth;
+  const month = searchParams.month ? parseInt(searchParams.month) : currentMonth;
 
   if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
     redirect(`/?year=${currentYear}&month=${currentMonth}`);
@@ -52,6 +52,19 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
     };
   });
 
+  // --- CÁLCULOS PARA O PORTFOLIO HEALTH ---
+  
+  // Encontra o valor alocado especificamente em CRIPTO
+  const cryptoAllocation = dashboardData.portfolioAllocation.find(
+    (item) => item.type === "CRIPTO" 
+  );
+  
+  const cryptoTotal = cryptoAllocation ? Number(cryptoAllocation.value) : 0;
+
+  // Usa o valor total da carteira calculado pelo backend
+  const totalEquity = dashboardData.summary.currentPortfolioValue;
+  // ---------------------------------------
+
   return (
     <>
       <Navbar />
@@ -65,10 +78,12 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
         </div>
 
         <div className="grid h-full grid-cols-1 gap-6 overflow-hidden lg:grid-cols-3">
+          
+          {/* COLUNA ESQUERDA/CENTRAL (SCROLLABLE) */}
           <ScrollArea className="h-full lg:col-span-2">
             <div className="flex flex-col gap-6 pr-6">
-              {" "}
               <SummaryCards summary={dashboardData.summary} />
+              
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <AssetPieChart
                   portfolioAllocation={dashboardData.portfolioAllocation || []}
@@ -79,14 +94,21 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
               </div>
             </div>
           </ScrollArea>
+
+          {/* COLUNA DIREITA (FIXA NO DESKTOP) */}
           <ScrollArea className="hidden h-full lg:block">
             <div className="flex flex-col gap-6">
+              
+              {/* Novo Componente de Saúde da Carteira */}
+              <PortfolioHealth 
+                totalEquity={totalEquity} 
+                cryptoTotal={cryptoTotal} 
+              />
+              
               <MarketMoversCard />
+              
               <LastTransactionsCard
-                lastTransactions={(dashboardData.lastTransactions || []).slice(
-                  0,
-                  3,
-                )}
+                lastTransactions={(dashboardData.lastTransactions || []).slice(0, 3)}
               />
             </div>
           </ScrollArea>
