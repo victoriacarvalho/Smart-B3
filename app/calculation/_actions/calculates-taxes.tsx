@@ -544,3 +544,51 @@ export async function calculateTaxForCron(userId: string) {
     return null;
   }
 }
+
+// Adicione ao final do arquivo calculates-taxes.tsx
+
+export async function simulateTax(
+  assetType: AssetType,
+  quantity: number,
+  unitPrice: number
+) {
+  const { userId } = auth();
+  if (!userId) return { error: "Não autorizado" };
+
+  // 1. Busca custo médio atual
+  // (Simplificado: assumindo que o asset existe. Em produção, trate erro se não existir)
+  const asset = await db.asset.findFirst({
+    where: { portfolio: { userId }, type: assetType, quantity: { gt: 0 } }
+  });
+
+  if (!asset) return { message: "Você não possui este ativo para vender." };
+
+  const avgPrice = Number(asset.averagePrice);
+  const saleValue = quantity * unitPrice;
+  const costValue = quantity * avgPrice;
+  const profit = saleValue - costValue;
+
+  let tax = 0;
+  let taxRate = 0;
+
+  
+  if (assetType === AssetType.ACAO) {
+    taxRate = 0.15; 
+    
+    if (saleValue <= 20000 && profit > 0) tax = 0;
+    else if (profit > 0) tax = profit * taxRate;
+  } else if (assetType === AssetType.CRIPTO) {
+    taxRate = 0.15; 
+    if (profit > 0) tax = profit * taxRate;
+  } else if (assetType === AssetType.FII) {
+    taxRate = 0.20;
+    if (profit > 0) tax = profit * taxRate;
+  }
+
+  return {
+    profit,
+    taxEstimate: tax,
+    saleValue,
+    isExempt: tax === 0 && profit > 0
+  };
+}

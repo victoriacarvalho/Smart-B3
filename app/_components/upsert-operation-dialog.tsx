@@ -9,6 +9,8 @@ import { NumericFormat } from "react-number-format";
 import { scanReceipt } from "@/app/_actions/scan-receipt"; 
 import { Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner"; 
+import { simulateTax } from "@/app/calculation/_actions/calculates-taxes";
+import { Calculator } from "lucide-react";
 
 import {
   OPERATION_TYPE_OPTIONS,
@@ -186,6 +188,62 @@ const UpsertOperationDialog = ({
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
+
+
+const handleSimulate = async () => {
+    const values = form.getValues();
+    const quantity = Number(values.quantity);
+    const unitPrice = Number(values.unitPrice);
+    const type = values.type;
+
+    if (!quantity || !unitPrice) {
+      toast.warning("Preencha a quantidade e o preço para simular.");
+      return;
+    }
+
+    if (type !== "VENDA") {
+      toast.info("A simulação de imposto é válida apenas para operações de VENDA.");
+      return;
+    }
+
+    toast.loading("Calculando estimativa...", { id: "simulacao" });
+
+    try {
+      const result = await simulateTax(assetInfo.type, quantity, unitPrice);
+
+      toast.dismiss("simulacao");
+
+      if (result.message && !result.profit) {
+        toast.info(result.message);
+        return;
+      }
+
+      const format = (val: number) => 
+        val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+      toast.success("Simulação Concluída", {
+        description: (
+          <div className="mt-2 flex flex-col gap-1">
+            <span className="font-semibold">Lucro Estimado: {format(result.profit || 0)}</span>
+            <span>Imposto a Pagar: {format(result.taxEstimate || 0)}</span>
+            {result.isExempt && (
+              <span className="text-xs text-emerald-600 font-bold">
+                (Isento de IR nesta operação)
+              </span>
+            )}
+          </div>
+        ),
+        duration: 10000, 
+      });
+
+    } catch (error) {
+      toast.dismiss("simulacao");
+      console.error(error);
+      toast.error("Erro ao realizar simulação.");
+    }
+  };
+
+
   return (
     <Dialog
       open={isOpen}
@@ -477,23 +535,40 @@ const UpsertOperationDialog = ({
                 />
               )}
             </div>
-            {/* Botões */}
-            <DialogFooter className="pt-4">
-              <DialogClose asChild>
-                <Button type="button" variant="outline">
-                  Cancelar
-                </Button>
-              </DialogClose>
-              <Button
-                type="submit"
-                disabled={isFetchingPrice || form.formState.isSubmitting}
+
+            {/* Botões */}      
+           <DialogFooter className="pt-4 sm:justify-between">
+              
+               <Button
+                type="button"
+                variant="secondary"
+                onClick={handleSimulate}
+                className="gap-2 mr-auto" 
+                disabled={form.formState.isSubmitting}
               >
-                {form.formState.isSubmitting
-                  ? "Salvando..."
-                  : isFetchingPrice
-                    ? "Aguarde..."
-                    : "Adicionar Operação"}
+                <Calculator className="h-4 w-4" />
+                Simular Imposto
               </Button>
+
+              <div className="flex gap-2">
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">
+                    Cancelar
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="submit"
+                  disabled={isFetchingPrice || form.formState.isSubmitting}
+                >
+                  {form.formState.isSubmitting
+                    ? "Salvando..."
+                    : isFetchingPrice
+                      ? "Aguarde..."
+                      : operationId 
+                        ? "Salvar Alterações" 
+                        : "Adicionar Operação"}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
