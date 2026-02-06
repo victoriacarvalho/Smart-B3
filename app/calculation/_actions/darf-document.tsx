@@ -1,9 +1,8 @@
-// app/calculation/_components/DarfDocument.tsx
+// app/calculation/_components/darf-document.tsx
 
 import React from "react";
 import { Page, Text, View, Document, StyleSheet } from "@react-pdf/renderer";
 
-// Estilos para o PDF (parecido com CSS-in-JS)
 const styles = StyleSheet.create({
   page: {
     padding: 30,
@@ -24,6 +23,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 8,
     color: "#555",
+    marginBottom: 2,
   },
   value: {
     fontSize: 11,
@@ -36,6 +36,12 @@ const styles = StyleSheet.create({
   field: {
     width: "48%",
   },
+  observation: {
+    fontSize: 9,
+    fontStyle: "italic",
+    color: "#444",
+    marginTop: 4,
+  },
 });
 
 interface DarfDocumentProps {
@@ -43,6 +49,7 @@ interface DarfDocumentProps {
   apuracao: string;
   valorPrincipal: string;
   codigoReceita: string;
+  observacoes?: string; // Novo campo opcional
 }
 
 export const DarfDocument = ({
@@ -50,6 +57,7 @@ export const DarfDocument = ({
   apuracao,
   valorPrincipal,
   codigoReceita,
+  observacoes,
 }: DarfDocumentProps) => (
   <Document>
     <Page size="A4" style={styles.page}>
@@ -88,6 +96,7 @@ export const DarfDocument = ({
         </View>
       </View>
 
+      {/* Seção de Multa e Juros (Zerados por padrão neste sistema) */}
       <View style={styles.section}>
         <View style={styles.row}>
           <View style={styles.field}>
@@ -105,6 +114,19 @@ export const DarfDocument = ({
         <Text style={styles.label}>10 - Valor Total</Text>
         <Text style={styles.value}>R$ {valorPrincipal}</Text>
       </View>
+
+      {/* Nova Seção de Observações para Cripto Exterior */}
+      {observacoes && (
+        <View
+          style={[
+            styles.section,
+            { borderStyle: "dashed", borderColor: "#666" },
+          ]}
+        >
+          <Text style={styles.label}>Observações / Composição do Valor:</Text>
+          <Text style={styles.observation}>{observacoes}</Text>
+        </View>
+      )}
     </Page>
   </Document>
 );

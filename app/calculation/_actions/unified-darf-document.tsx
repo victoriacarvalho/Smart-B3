@@ -1,4 +1,5 @@
 // app/calculation/_actions/unified-darf-document.tsx
+
 import React from "react";
 import { Page, Text, View, Document, StyleSheet } from "@react-pdf/renderer";
 
@@ -28,12 +29,20 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     textAlign: "right",
   },
+  note: {
+    fontSize: 9,
+    color: "#444",
+    marginTop: 4,
+    fontStyle: "italic",
+  },
 });
 
 interface DarfData {
   apuracao: string;
   valorPrincipal: string;
   codigoReceita: string;
+  // Adicionamos um campo opcional para notas/detalhes
+  nota?: string;
 }
 
 interface UnifiedDarfDocumentProps {
@@ -72,6 +81,8 @@ const DarfSection: React.FC<{ title: string; data: DarfData | null }> = ({
           <Text style={styles.value}>R$ {data.valorPrincipal}</Text>
         </View>
       </View>
+      {/* Exibe a nota se existir (ex: aviso sobre Exterior) */}
+      {data.nota && <Text style={styles.note}>{data.nota}</Text>}
     </View>
   );
 };
@@ -103,13 +114,20 @@ export const UnifiedDarfDocument = ({
 
       <DarfSection title="Ações (Swing/Day Trade)" data={acaoData} />
       <DarfSection title="Fundos Imobiliários (FIIs)" data={fiiData} />
-      <DarfSection title="Criptomoedas" data={criptoData} />
+      <DarfSection
+        title="Criptomoedas (Nacional e Exterior)"
+        data={criptoData}
+      />
 
       <View style={styles.totalSection}>
         <Text style={styles.label}>
-          10 - Valor Total (Soma de todos os impostos)
+          10 - Valor Total (Soma de todos os impostos calculados)
         </Text>
         <Text style={styles.totalValue}>R$ {valorTotal}</Text>
+        <Text style={[styles.note, { textAlign: "right" }]}>
+          *Valores referentes ao exterior são de recolhimento anual, exibidos
+          aqui para controle.
+        </Text>
       </View>
     </Page>
   </Document>

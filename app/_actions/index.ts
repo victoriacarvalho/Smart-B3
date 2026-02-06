@@ -32,6 +32,7 @@ const upsertTransactionSchema = z
     date: z.date(),
     operationType: z.nativeEnum(OperationType).optional(),
     retentionPeriod: z.nativeEnum(RetentionPeriod).optional(),
+    isForeignExchange: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     if (
@@ -133,11 +134,11 @@ async function recalculateMonthlyResults(
       year,
       month,
       assetType,
-      operationType: OperationType.SWING_TRADE, 
+      operationType: OperationType.SWING_TRADE,
       totalSold,
       netProfit,
       taxDue,
-      accumulatedLoss: new Decimal(0), 
+      accumulatedLoss: new Decimal(0),
       taxBase: netProfit.isPositive() ? netProfit : new Decimal(0),
     });
   }
@@ -197,8 +198,9 @@ export const upsertTransaction = async (
   if (!userId) throw new Error("Não autorizado.");
 
   const validatedParams = upsertTransactionSchema.parse(params);
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { assetType, ...dataForDb } = validatedParams;
+  const { assetType, isForeignExchange, ...dataForDb } = validatedParams;
 
   const asset = await db.asset.findUnique({
     where: { id: dataForDb.assetId },
@@ -207,6 +209,13 @@ export const upsertTransaction = async (
 
   if (asset?.portfolio.userId !== userId) {
     throw new Error("Operação não permitida.");
+  }
+
+  if (assetType === AssetType.CRIPTO && isForeignExchange !== undefined) {
+    await db.asset.update({
+      where: { id: dataForDb.assetId },
+      data: { isForeign: isForeignExchange },
+    });
   }
 
   const data = {
@@ -231,7 +240,7 @@ export const upsertTransaction = async (
     transactionDate.getUTCMonth() + 1,
   );
 
-  revalidatePath("/"); 
+  revalidatePath("/");
   revalidatePath("/transactions");
   revalidatePath("/reports");
   return { success: true };

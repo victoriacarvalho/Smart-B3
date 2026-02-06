@@ -68,10 +68,12 @@ async function _calculateTaxForType(
     const profit = saleValue - costValue;
 
     if (assetType === AssetType.CRIPTO && tx.asset.isForeign) {
+      // Lei 14.754: Cripto no exterior acumula separado (15% anual)
       totalProfitForeign += profit;
     } else if (assetType === AssetType.ACAO && tx.isDayTrade) {
       totalProfitBrazil_DayTrade += profit;
     } else {
+      // Ações Swing ou Cripto BR
       totalSalesBrazil += saleValue;
       totalProfitBrazil_Swing += profit;
     }
@@ -124,12 +126,15 @@ async function _calculateTaxForType(
 
   let tax = 0;
   let codigoReceita = "";
+  let message = "Cálculo bem-sucedido.";
 
   switch (assetType) {
     case AssetType.CRIPTO: {
       let taxBrazil = 0;
       let taxForeign = 0;
 
+      // --- CRIPTO NACIONAL ---
+      // Regra: Isenção para vendas totais até R$ 35.000 no mês
       const prevLossBR = await findPreviousLoss(OperationType.CRIPTO_BR);
       const netProfitBR = totalProfitBrazil_Swing + prevLossBR;
 
@@ -137,11 +142,15 @@ async function _calculateTaxForType(
         if (totalSalesBrazil > 35000) {
           taxBrazil = netProfitBR * 0.15;
         }
+        // Se teve lucro (isento ou não), zera o prejuízo acumulado
         await storeNewLoss(OperationType.CRIPTO_BR, 0);
       } else {
+        // Acumula prejuízo
         await storeNewLoss(OperationType.CRIPTO_BR, netProfitBR);
       }
 
+      // --- CRIPTO EXTERIOR (Lei 14.754) ---
+      // Regra: 15% sobre o lucro, sem isenção mensal. Tributação Anual.
       const prevLossEXT = await findPreviousLoss(OperationType.CRIPTO_EXT);
       const netProfitEXT = totalProfitForeign + prevLossEXT;
 
@@ -152,16 +161,24 @@ async function _calculateTaxForType(
         await storeNewLoss(OperationType.CRIPTO_EXT, netProfitEXT);
       }
 
-      if (taxBrazil > 0 && taxForeign > 0) {
-        tax = taxBrazil + taxForeign;
-        codigoReceita = "4600/1889";
-      } else if (taxForeign > 0) {
-        tax = taxForeign;
-        codigoReceita = "1889";
-      } else if (taxBrazil > 0) {
-        tax = taxBrazil;
-        codigoReceita = "4600";
+      // --- GERAÇÃO DO DARF (SOMA BRASIL + EXTERIOR) ---
+      // CORREÇÃO: Somamos incondicionalmente para exibir o valor total devido
+      tax = taxBrazil + taxForeign;
+
+      if (tax > 0) {
+        if (taxBrazil > 0 && taxForeign > 0) {
+          codigoReceita = "4600 / IRPF (AAI)"; // Misto
+        } else if (taxBrazil > 0) {
+          codigoReceita = "4600"; // Apenas Nacional
+        } else {
+          codigoReceita = "IRPF (AAI)"; // Apenas Exterior (Controle)
+        }
       }
+
+      if (taxForeign > 0) {
+        message += ` Nota: O valor inclui R$ ${taxForeign.toFixed(2)} referente ao Exterior (Declarar no Ajuste Anual).`;
+      }
+
       break;
     }
 
@@ -217,11 +234,25 @@ async function _calculateTaxForType(
   }
 
   if (tax <= 0) {
+    let detalhe = "Nenhum imposto devido.";
+
+    // Diagnóstico inteligente para entender o motivo do zero
+    if (assetType === AssetType.CRIPTO) {
+      if (totalProfitForeign > 0) {
+        detalhe = "Lucro no Exterior compensado por prejuízos anteriores.";
+      } else if (totalSalesBrazil > 0 && totalSalesBrazil <= 35000) {
+        detalhe = `Isento: Vendas Nacionais (R$ ${totalSalesBrazil.toLocaleString("pt-BR")}) abaixo de 35k.`;
+      } else if (totalSalesBrazil === 0 && totalProfitForeign === 0) {
+        detalhe =
+          "Não foram detectados lucros tributáveis (Verifique se o ativo está marcado como 'Estrangeira').";
+      }
+    }
+
     return {
       tax: new Prisma.Decimal(0),
       codigoReceita: "",
       valorPrincipal: "0,00",
-      message: "Nenhum imposto devido.",
+      message: detalhe,
     };
   }
 
@@ -229,7 +260,7 @@ async function _calculateTaxForType(
     tax: new Prisma.Decimal(tax),
     codigoReceita: codigoReceita,
     valorPrincipal: tax.toFixed(2).replace(".", ","),
-    message: "Cálculo bem-sucedido.",
+    message: message,
   };
 }
 
@@ -259,6 +290,11 @@ async function _generateOrUpdateUnifiedDarf(
       apuracao: apuracao,
       valorPrincipal: darf.taxDue.toFixed(2).replace(".", ","),
       codigoReceita: darf.codigoReceita || "N/A",
+      nota:
+        darf.assetType === AssetType.CRIPTO &&
+        darf.codigoReceita?.includes("AAI")
+          ? "Nota: Contém valores referentes a aplicações no Exterior (AAI)."
+          : undefined,
     };
 
     if (darf.assetType === AssetType.ACAO) acaoData = darfInfo;
@@ -383,14 +419,6 @@ export async function calculateTax(
     return { success: false, message: calcResult.message };
   }
 
-  if (calcResult.codigoReceita.includes("/")) {
-    return {
-      success: false,
-      message:
-        "Imposto devido em Cripto Nacional e Exterior. Esta action não pode gerar DARFs separadas. Use o 'Relatório Unificado' para consolidar.",
-    };
-  }
-
   const apuracao = `${String(month).padStart(2, "0")}/${year}`;
   const vencimento = new Date(year, month + 1, 0);
 
@@ -402,6 +430,10 @@ export async function calculateTax(
     vencimento: vencimento.toLocaleDateString("pt-BR"),
     valorPrincipal: calcResult.valorPrincipal,
     codigoReceita: calcResult.codigoReceita,
+    observacoes:
+      calcResult.message !== "Cálculo bem-sucedido."
+        ? calcResult.message
+        : undefined,
   };
 
   const fileName = `DARF-${assetType}-${calcResult.codigoReceita}-${userId}.pdf`;
@@ -459,7 +491,7 @@ export async function calculateTax(
 
   return {
     success: true,
-    message: `DARF (Cód. ${calcResult.codigoReceita}) gerado e Relatório Unificado atualizado!`,
+    message: `DARF (Cód. ${calcResult.codigoReceita}) gerado e Relatório Unificado atualizado! ${calcResult.message !== "Cálculo bem-sucedido." ? calcResult.message : ""}`,
   };
 }
 
@@ -545,20 +577,22 @@ export async function calculateTaxForCron(userId: string) {
   }
 }
 
-// Adicione ao final do arquivo calculates-taxes.tsx
-
 export async function simulateTax(
   assetType: AssetType,
   quantity: number,
-  unitPrice: number
+  unitPrice: number,
+  isDayTrade: boolean = false,
+  isForeign: boolean = false,
 ) {
   const { userId } = auth();
   if (!userId) return { error: "Não autorizado" };
 
-  // 1. Busca custo médio atual
-  // (Simplificado: assumindo que o asset existe. Em produção, trate erro se não existir)
   const asset = await db.asset.findFirst({
-    where: { portfolio: { userId }, type: assetType, quantity: { gt: 0 } }
+    where: {
+      portfolio: { userId },
+      type: assetType,
+      quantity: { gt: 0 },
+    },
   });
 
   if (!asset) return { message: "Você não possui este ativo para vender." };
@@ -571,17 +605,31 @@ export async function simulateTax(
   let tax = 0;
   let taxRate = 0;
 
-  
   if (assetType === AssetType.ACAO) {
-    taxRate = 0.15; 
-    
-    if (saleValue <= 20000 && profit > 0) tax = 0;
-    else if (profit > 0) tax = profit * taxRate;
+    if (isDayTrade) {
+      taxRate = 0.2;
+      if (profit > 0) tax = profit * taxRate;
+    } else {
+      taxRate = 0.15;
+      if (saleValue <= 20000 && profit > 0) tax = 0;
+      else if (profit > 0) tax = profit * taxRate;
+    }
   } else if (assetType === AssetType.CRIPTO) {
-    taxRate = 0.15; 
-    if (profit > 0) tax = profit * taxRate;
+    taxRate = 0.15; //Lei 14.754
+
+    if (isForeign) {
+      // EXTERIOR: Lei 14.754 - Sem isenção de pequeno valor.
+      if (profit > 0) tax = profit * taxRate;
+    } else {
+      // NACIONAL: Mantém isenção para vendas < 35k
+      if (saleValue <= 35000 && profit > 0) {
+        tax = 0;
+      } else if (profit > 0) {
+        tax = profit * taxRate;
+      }
+    }
   } else if (assetType === AssetType.FII) {
-    taxRate = 0.20;
+    taxRate = 0.2;
     if (profit > 0) tax = profit * taxRate;
   }
 
@@ -589,6 +637,11 @@ export async function simulateTax(
     profit,
     taxEstimate: tax,
     saleValue,
-    isExempt: tax === 0 && profit > 0
+    isExempt: tax === 0 && profit > 0,
+    isForeign,
+    message:
+      isForeign && assetType === AssetType.CRIPTO && tax > 0
+        ? "Este imposto será devido na Declaração Anual (Exterior), não no DARF mensal."
+        : undefined,
   };
 }
