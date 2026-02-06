@@ -1,14 +1,13 @@
-// app/_data/get-dashboard/index.ts
 "use server";
 
 import { db } from "@/app/_lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-// Importação do AssetType corrigida
 import { AssetType, Transaction } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { fetchStockOrFiiPrice } from "@/lib/services/api/brapi";
 import { fetchCryptoPrice } from "@/lib/services/api/coingecko";
 import { DashboardData, DashboardTransaction } from "./types";
+import { endOfDay } from "date-fns";
 
 async function fetchAssetPrice(symbol: string, type: AssetType) {
   try {
@@ -45,11 +44,13 @@ function serializeTransaction(
 }
 
 export const getDashboard = async (
-  year: number,
-  month: number,
+  startDate: Date,
+  endDate: Date,
 ): Promise<DashboardData> => {
   const { userId } = auth();
-  if (!userId) throw new Error("Não autorizado.");
+  if (!userId) throw new Error("Unauthorized");
+
+  const effectiveEndDate = endOfDay(endDate);
 
   const userAssets = await db.asset.findMany({
     where: {
@@ -58,20 +59,77 @@ export const getDashboard = async (
     },
   });
 
-  if (userAssets.length === 0) {
-    return {
-      summary: {
-        totalNetProfit: 0,
-        totalTaxDue: 0,
-        totalSold: 0,
-        totalInvestedCost: 0,
-        currentPortfolioValue: 0,
+  const periodTransactions = await db.transaction.findMany({
+    where: {
+      asset: { portfolio: { userId } },
+      date: {
+        gte: startDate,
+        lte: effectiveEndDate,
       },
-      lastTransactions: [],
-      profitByAssetType: [],
-      portfolioAllocation: [],
-    };
-  }
+    },
+    include: { asset: { select: { symbol: true, type: true } } },
+    orderBy: { date: "desc" },
+  });
+
+  const startMonth = startDate.getMonth() + 1;
+  const startYear = startDate.getFullYear();
+  const endMonth = endDate.getMonth() + 1;
+  const endYear = endDate.getFullYear();
+
+  const allMonthlyResults = await db.monthlyResult.findMany({
+    where: {
+      userId,
+      year: { gte: startYear, lte: endYear },
+    },
+  });
+
+  const filteredMonthlyResults = allMonthlyResults.filter((result) => {
+    if (result.year > startYear && result.year < endYear) return true;
+
+    if (result.year === startYear && result.year === endYear) {
+      return result.month >= startMonth && result.month <= endMonth;
+    }
+
+    if (result.year === startYear) return result.month >= startMonth;
+
+    if (result.year === endYear) return result.month <= endMonth;
+
+    return false;
+  });
+
+  const summaryTotals = filteredMonthlyResults.reduce(
+    (acc, result) => {
+      acc.totalTaxDue = acc.totalTaxDue.plus(result.taxDue);
+      acc.totalSold = acc.totalSold.plus(result.totalSold);
+      acc.totalNetProfit = acc.totalNetProfit.plus(result.netProfit);
+      return acc;
+    },
+    {
+      totalTaxDue: new Decimal(0),
+      totalSold: new Decimal(0),
+      totalNetProfit: new Decimal(0),
+    },
+  );
+
+  const profitByAssetType: {
+    [key in Exclude<AssetType, "UNIFICADA">]: Decimal;
+  } = {
+    ACAO: new Decimal(0),
+    FII: new Decimal(0),
+    CRIPTO: new Decimal(0),
+  };
+
+  filteredMonthlyResults.forEach((result) => {
+    if (
+      result.assetType === AssetType.ACAO ||
+      result.assetType === AssetType.FII ||
+      result.assetType === AssetType.CRIPTO
+    ) {
+      profitByAssetType[result.assetType] = profitByAssetType[
+        result.assetType
+      ].plus(result.netProfit);
+    }
+  });
 
   const pricePromises = userAssets.map((asset) =>
     fetchAssetPrice(asset.symbol, asset.type),
@@ -81,7 +139,6 @@ export const getDashboard = async (
   let totalInvestedCost = new Decimal(0);
   let currentPortfolioValue = new Decimal(0);
 
-  // CORREÇÃO: Usando Exclude para tipar o objeto
   const portfolioAllocation: {
     [key in Exclude<AssetType, "UNIFICADA">]: Decimal;
   } = {
@@ -99,7 +156,6 @@ export const getDashboard = async (
     );
     currentPortfolioValue = currentPortfolioValue.plus(assetCurrentValue);
 
-    // CORREÇÃO: Adicionado 'if' para não tentar alocar 'UNIFICADA'
     if (
       asset.type === AssetType.ACAO ||
       asset.type === AssetType.FII ||
@@ -110,66 +166,23 @@ export const getDashboard = async (
     }
   });
 
-  const monthlyResults = await db.monthlyResult.findMany({
-    where: { userId, year, month },
-  });
-
-  const monthlyTotals = monthlyResults.reduce(
-    (acc, result) => {
-      acc.totalTaxDue = acc.totalTaxDue.plus(result.taxDue);
-      acc.totalSold = acc.totalSold.plus(result.totalSold);
-      acc.totalNetProfit = acc.totalNetProfit.plus(result.netProfit);
-      return acc;
-    },
-    {
-      totalTaxDue: new Decimal(0),
-      totalSold: new Decimal(0),
-      totalNetProfit: new Decimal(0),
-    },
-  );
-
-  const profitByAssetType = monthlyResults.reduce(
-    (acc, result) => {
-      // CORREÇÃO: Adicionado 'if' para não tentar alocar 'UNIFICADA'
-      if (
-        result.assetType === AssetType.ACAO ||
-        result.assetType === AssetType.FII ||
-        result.assetType === AssetType.CRIPTO
-      ) {
-        acc[result.assetType] = (acc[result.assetType] || new Decimal(0)).plus(
-          result.netProfit,
-        );
-      }
-      return acc;
-    },
-    // CORREÇÃO: Tipagem do acumulador
-    {} as { [key in Exclude<AssetType, "UNIFICADA">]: Decimal },
-  );
-
-  const lastTransactionsFromDb = await db.transaction.findMany({
-    where: { asset: { portfolio: { userId } } },
-    include: { asset: { select: { symbol: true, type: true } } },
-    orderBy: { date: "desc" },
-    take: 5,
-  });
-
-  const lastTransactions = lastTransactionsFromDb.map(serializeTransaction);
-
   return {
     summary: {
-      totalNetProfit: monthlyTotals.totalNetProfit.toNumber(),
-      totalTaxDue: monthlyTotals.totalTaxDue.toNumber(),
-      totalSold: monthlyTotals.totalSold.toNumber(),
+      totalNetProfit: summaryTotals.totalNetProfit.toNumber(),
+      totalTaxDue: summaryTotals.totalTaxDue.toNumber(),
+      totalSold: summaryTotals.totalSold.toNumber(),
       totalInvestedCost: totalInvestedCost.toNumber(),
       currentPortfolioValue: currentPortfolioValue.toNumber(),
     },
-    lastTransactions,
+    lastTransactions: periodTransactions.slice(0, 5).map(serializeTransaction),
+
     profitByAssetType: Object.entries(profitByAssetType).map(
       ([type, profit]) => ({
         type: type as AssetType,
         profit: Number(profit),
       }),
     ),
+
     portfolioAllocation: Object.entries(portfolioAllocation).map(
       ([type, value]) => ({
         type: type as AssetType,
