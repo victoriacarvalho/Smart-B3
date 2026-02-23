@@ -15,7 +15,10 @@ async function populateAssetCache() {
   const allFetchedAssets: CachedAsset[] = [];
 
   try {
-    const brapiResponse = await fetch("https://brapi.dev/api/quote/list");
+    const token = process.env.BRAPI_API_TOKEN;
+    const brapiResponse = await fetch(
+      `https://brapi.dev/api/quote/list?token=${token}`,
+    );
     if (!brapiResponse.ok)
       throw new Error(
         `Brapi API responded with status ${brapiResponse.status}`,
