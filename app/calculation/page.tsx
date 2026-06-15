@@ -43,22 +43,33 @@ const SubscriptionPage = async () => {
                 <div className="flex items-start gap-3">
                   <CheckIcon className="text-primary" />{" "}
                   <p>
-                    Isenção se o total de <b>VENDAS</b> no mês for inferior a R$
-                    35.000 (em corretoras BR).
+                    <b>Nacional:</b> Isenção se o total de VENDAS no mês for
+                    inferior a R$ 35.000 (em corretoras com CNPJ no Brasil).
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckIcon className="text-primary" />
                   <p>
-                    Ativos no exterior são tributados em 15% sobre o lucro, sem
-                    isenção mensal.
+                    <b>Exterior:</b> Tributação de 15% sobre o lucro (sem
+                    isenção mensal). O imposto é apurado anualmente (AAI).
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <XIcon className="mt-1 h-4 w-4 flex-shrink-0" />
                   <p>
-                    Tributação de 15% se <b>VENDAS</b> no mês ultrapassarem R$
-                    35.000 (em corretoras BR).
+                    Operações em corretoras estrangeiras{" "}
+                    <b>não possuem isenção</b> de R$ 35k.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3 rounded-md bg-muted p-2">
+                  <FileText className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" />
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-bold text-foreground">
+                      Atenção (DeCripto):
+                    </span>{" "}
+                    Se movimentar &gt; R$ 35.000/mês em corretoras estrangeiras
+                    ou P2P, você é obrigado a declarar mensalmente no e-CAC,
+                    mesmo se tiver prejuízo.
                   </p>
                 </div>
               </CardContent>

@@ -97,6 +97,7 @@ model Transaction {
   createdAt       DateTime         @default(now())
   operationType   OperationType?
   retentionPeriod RetentionPeriod?
+ 
 
   asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
 }
@@ -131,6 +132,7 @@ enum AssetType {
 enum TransactionType {
   COMPRA
   VENDA
+  RENDIMENTO
 }
 
 enum OperationType {

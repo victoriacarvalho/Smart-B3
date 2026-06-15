@@ -7,10 +7,12 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { ScrollArea } from "../_components/ui/scroll-area";
 import TimeSelect from "../(home)/_components/time-select";
+import { startOfMonth, endOfMonth, endOfDay } from "date-fns"; // <--- 1. ADICIONE ESTE IMPORT
+
 interface TransactionsPageProps {
   searchParams: {
-    month?: string;
-    year?: string;
+    startDate?: string; // <--- 2. ALTERE AQUI (remova month/year)
+    endDate?: string;
   };
 }
 
@@ -21,15 +23,17 @@ const TransactionsPage = async ({ searchParams }: TransactionsPageProps) => {
     redirect("/login");
   }
 
-  const month = searchParams.month
-    ? parseInt(searchParams.month)
-    : new Date().getMonth() + 1;
-  const year = searchParams.year
-    ? parseInt(searchParams.year)
-    : new Date().getFullYear();
+  // 3. SUBSTITUA A LÓGICA DE DATA POR ESTA:
+  const now = new Date();
 
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
+  const startDate = searchParams.startDate
+    ? new Date(searchParams.startDate)
+    : startOfMonth(now);
+
+  const endDate = searchParams.endDate
+    ? endOfDay(new Date(searchParams.endDate)) // Garante que pegue até o último segundo do dia
+    : endOfMonth(now);
+  // ----------------------------------------
 
   const transactions = await db.transaction.findMany({
     where: {

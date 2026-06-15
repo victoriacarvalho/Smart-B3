@@ -10,11 +10,13 @@ import AssetPieChart from "./_components/asset-pie-chart";
 import AssetAllocationCard from "./_components/asset-alocation-card";
 import MarketMoversCard from "./_components/market-movers-card";
 import LastTransactionsCard from "./_components/last-transactions-card";
+import { PortfolioHealth } from "./_components/portfolio-health";
+import { startOfMonth, endOfMonth } from "date-fns"; // <--- 1. Importe isso
 
 interface HomeProps {
   searchParams: {
-    year?: string;
-    month?: string;
+    startDate?: string; // <--- 2. Mudou de year/month para startDate/endDate
+    endDate?: string;
   };
 }
 
@@ -24,33 +26,46 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
     redirect("/login");
   }
 
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  // --- 3. NOVA LÓGICA DE DATA ---
+  const now = new Date();
 
-  const year = searchParams.year ? parseInt(searchParams.year) : currentYear;
-  const month = searchParams.month
-    ? parseInt(searchParams.month)
-    : currentMonth;
+  // Se não houver params, usa o início e fim do mês atual como padrão
+  const startDate = searchParams.startDate
+    ? new Date(searchParams.startDate)
+    : startOfMonth(now);
 
-  if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-    redirect(`/?year=${currentYear}&month=${currentMonth}`);
-  }
+  const endDate = searchParams.endDate
+    ? new Date(searchParams.endDate)
+    : endOfMonth(now);
+  // -----------------------------
 
-  const dashboardData = await getDashboard(year, month).catch((error) => {
-    console.error("Falha ao carregar dados do dashboard:", error);
-    return {
-      summary: {
-        totalNetProfit: 0,
-        totalTaxDue: 0,
-        totalSold: 0,
-        totalInvestedCost: 0,
-        currentPortfolioValue: 0,
-      },
-      lastTransactions: [],
-      profitByAssetType: [],
-      portfolioAllocation: [],
-    };
-  });
+  // --- 4. PASSA AS DATAS PARA O GET DASHBOARD ---
+  const dashboardData = await getDashboard(startDate, endDate).catch(
+    (error) => {
+      console.error("Falha ao carregar dados do dashboard:", error);
+      return {
+        summary: {
+          totalNetProfit: 0,
+          totalTaxDue: 0,
+          totalSold: 0,
+          totalInvestedCost: 0,
+          currentPortfolioValue: 0,
+        },
+        lastTransactions: [],
+        profitByAssetType: [],
+        portfolioAllocation: [],
+      };
+    },
+  );
+
+  // --- CÁLCULOS PARA O PORTFOLIO HEALTH ---
+  const cryptoAllocation = dashboardData.portfolioAllocation.find(
+    (item) => item.type === "CRIPTO",
+  );
+
+  const cryptoTotal = cryptoAllocation ? Number(cryptoAllocation.value) : 0;
+  const totalEquity = dashboardData.summary.currentPortfolioValue;
+  // ---------------------------------------
 
   return (
     <>
@@ -60,15 +75,16 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
           <h1 className="hidden text-2xl font-bold lg:block">Dashboard</h1>
           <div className="flex items-center gap-4">
             <AddTransactionDialog />
-            <TimeSelect />
+            <TimeSelect /> {/* O TimeSelect agora controla a URL inteira */}
           </div>
         </div>
 
         <div className="grid h-full grid-cols-1 gap-6 overflow-hidden lg:grid-cols-3">
+          {/* COLUNA ESQUERDA/CENTRAL (SCROLLABLE) */}
           <ScrollArea className="h-full lg:col-span-2">
             <div className="flex flex-col gap-6 pr-6">
-              {" "}
               <SummaryCards summary={dashboardData.summary} />
+
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <AssetPieChart
                   portfolioAllocation={dashboardData.portfolioAllocation || []}
@@ -79,9 +95,17 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
               </div>
             </div>
           </ScrollArea>
+
+          {/* COLUNA DIREITA (FIXA NO DESKTOP) */}
           <ScrollArea className="hidden h-full lg:block">
             <div className="flex flex-col gap-6">
+              <PortfolioHealth
+                totalEquity={totalEquity}
+                cryptoTotal={cryptoTotal}
+              />
+
               <MarketMoversCard />
+
               <LastTransactionsCard
                 lastTransactions={(dashboardData.lastTransactions || []).slice(
                   0,

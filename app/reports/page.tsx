@@ -7,6 +7,7 @@ import { DataTable } from "@/app/_components/ui/data-table";
 import { darfColumns } from "./_components/darf-columns";
 import { AssetType, Prisma } from "@prisma/client";
 import { ViewToggle } from "./_components/view-toggle";
+import { DarfText } from "./_components/darf-text";
 
 export default async function ReportsPage({
   searchParams,
@@ -46,7 +47,9 @@ export default async function ReportsPage({
         <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="text-2xl font-bold">Relatórios Gerados</h1>
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <ViewToggle />
+           
+            <DarfText />
+             <ViewToggle />
           </div>
         </div>
 
