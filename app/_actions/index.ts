@@ -279,10 +279,17 @@ export const findOrCreateAsset = async (params: {
   const { userId } = auth();
   if (!userId) throw new Error("Não autorizado.");
 
+  const clerkUser = await clerkClient().users.getUser(userId);
+  const userEmail = clerkUser.emailAddresses[0]?.emailAddress ?? `${userId}@no-email.com`;
+
   await db.user.upsert({
     where: { id: userId },
     update: {},
-    create: { id: userId, email: "", name: "" },
+    create: { 
+      id: userId, 
+      email: userEmail, 
+      name: clerkUser.firstName ?? "" 
+    },
   });
 
   let portfolio = await db.portfolio.findFirst({
