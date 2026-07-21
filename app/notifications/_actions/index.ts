@@ -16,7 +16,7 @@ export async function sendMonthlyNotification(
   to: string,
   name: string,
   month: string,
-  pdfLink?: string,
+  taxDue: string, // Terceiro parâmetro obrigatório do template
 ) {
   const { WHATSAPP_API_TOKEN, WHATSAPP_PHONE_NUMBER_ID } = process.env;
 
@@ -40,8 +40,9 @@ export async function sendMonthlyNotification(
         {
           type: "body",
           parameters: [
-            { type: "text", text: name },
-            { type: "text", text: month },
+            { type: "text", text: name },   // {{1}}
+            { type: "text", text: month },  // {{2}}
+            { type: "text", text: taxDue }, // {{3}}
           ],
         },
       ],
@@ -59,39 +60,10 @@ export async function sendMonthlyNotification(
 
   if (!response.ok) {
     const errorData = await response.json();
-    console.error(`Falha ao enviar para ${to}:`, errorData.error.message);
-    return;
+    console.error(`Falha ao enviar para ${to}:`, errorData.error?.message || errorData);
+    throw new Error("Falha na API do WhatsApp.");
   } else {
-    console.log(`Notificação de texto enviada com sucesso para ${to}`);
-  }
-
-  if (pdfLink) {
-    const linkPayload = {
-      messaging_product: "whatsapp",
-      to: sanitizedTo,
-      type: "text",
-      text: {
-        body: `📄 Aqui está o seu DARF unificado mais recente (${month}): ${pdfLink}`,
-      },
-    };
-
-    const linkResponse = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${WHATSAPP_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(linkPayload),
-    });
-
-    if (!linkResponse.ok) {
-      console.error(
-        `Falha ao enviar link do PDF para ${to}:`,
-        await linkResponse.json(),
-      );
-    } else {
-      console.log(`Link do PDF enviado com sucesso para ${to}`);
-    }
+    console.log(`Notificação de template enviada com sucesso para ${to}`);
   }
 }
 
@@ -131,28 +103,36 @@ export const updateUserWhatsappInfo = async (
 
   const sanitizedPhoneNumber = phoneNumber.replace(/\D/g, "");
 
+  // Busca o último DARF unificado com o campo correto (taxDue)
   const lastUnifiedDarf = await db.darf.findFirst({
     where: {
       userId: userId,
       assetType: AssetType.UNIFICADA,
     },
     orderBy: [{ year: "desc" }, { month: "desc" }],
-    select: { pdfUrl: true, month: true, year: true },
+    select: { month: true, year: true, taxDue: true }, 
   });
 
-  // 3. Prepara os dados para o envio
+  // Prepara o mês formatado
   const monthString = lastUnifiedDarf
     ? `${String(lastUnifiedDarf.month).padStart(2, "0")}/${lastUnifiedDarf.year}`
     : "Nenhum";
 
-  const pdfLink = lastUnifiedDarf?.pdfUrl;
+  // Prepara o valor do imposto formatado (ex: "150,50")
+  const formattedTax = lastUnifiedDarf?.taxDue
+    ? Number(lastUnifiedDarf.taxDue).toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    : "0,00";
 
   try {
+    // Dispara o WhatsApp com as 3 variáveis exatas do template
     await sendMonthlyNotification(
       sanitizedPhoneNumber,
       name,
       monthString,
-      pdfLink,
+      formattedTax,
     );
   } catch (e) {
     console.error(

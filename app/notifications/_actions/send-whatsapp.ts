@@ -1,4 +1,3 @@
-// app/notifications/_actions/send-whatsapp.ts
 "use server";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -6,6 +5,7 @@ async function sendMonthlyNotification(
   to: string,
   name: string,
   month: string,
+  taxAmount: string 
 ) {
   const { WHATSAPP_API_TOKEN, WHATSAPP_PHONE_NUMBER_ID } = process.env;
 
@@ -28,13 +28,15 @@ async function sendMonthlyNotification(
         {
           type: "body",
           parameters: [
-            { type: "text", text: name },
-            { type: "text", text: month },
+            { type: "text", text: name },      
+            { type: "text", text: month },      
+            { type: "text", text: taxAmount }, 
           ],
         },
       ],
     },
   };
+  
   try {
     const response = await fetch(url, {
       method: "POST",

@@ -1,4 +1,3 @@
-// app/calculation/_actions/calculates-taxes.tsx
 "use server";
 
 import React from "react";
@@ -61,6 +60,8 @@ async function _calculateTaxForType(
   let totalProfitBrazil_Swing = 0;
   let totalProfitBrazil_DayTrade = 0;
   let totalProfitForeign = 0;
+  
+  let totalIrrf = 0; 
 
   for (const tx of saleTransactions) {
     const saleValue = tx.quantity.toNumber() * tx.unitPrice.toNumber();
@@ -68,14 +69,23 @@ async function _calculateTaxForType(
     const profit = saleValue - costValue;
 
     if (assetType === AssetType.CRIPTO && tx.asset.isForeign) {
-      // Lei 14.754: Cripto no exterior acumula separado (15% anual)
       totalProfitForeign += profit;
     } else if (assetType === AssetType.ACAO && tx.isDayTrade) {
       totalProfitBrazil_DayTrade += profit;
+      if (profit > 0) totalIrrf += profit * 0.01; 
     } else {
-      // Ações Swing ou Cripto BR
       totalSalesBrazil += saleValue;
       totalProfitBrazil_Swing += profit;
+      
+      if (assetType === AssetType.ACAO) {
+        totalIrrf += saleValue * 0.00005; // 0,005% sobre o valor da alienação
+      } else if (assetType === AssetType.FII) {
+        if (tx.isDayTrade && profit > 0) {
+          totalIrrf += profit * 0.01; // Day Trade em FII também é 1% sobre o lucro
+        } else if (!tx.isDayTrade) {
+          totalIrrf += saleValue * 0.00005; // Comum em FII é 0,005% sobre alienação
+        }
+      }
     }
   }
 
@@ -133,8 +143,6 @@ async function _calculateTaxForType(
       let taxBrazil = 0;
       let taxForeign = 0;
 
-      // --- CRIPTO NACIONAL ---
-      // Regra: Isenção para vendas totais até R$ 35.000 no mês
       const prevLossBR = await findPreviousLoss(OperationType.CRIPTO_BR);
       const netProfitBR = totalProfitBrazil_Swing + prevLossBR;
 
@@ -142,15 +150,11 @@ async function _calculateTaxForType(
         if (totalSalesBrazil > 35000) {
           taxBrazil = netProfitBR * 0.15;
         }
-        // Se teve lucro (isento ou não), zera o prejuízo acumulado
         await storeNewLoss(OperationType.CRIPTO_BR, 0);
       } else {
-        // Acumula prejuízo
         await storeNewLoss(OperationType.CRIPTO_BR, netProfitBR);
       }
 
-      // --- CRIPTO EXTERIOR (Lei 14.754) ---
-      // Regra: 15% sobre o lucro, sem isenção mensal. Tributação Anual.
       const prevLossEXT = await findPreviousLoss(OperationType.CRIPTO_EXT);
       const netProfitEXT = totalProfitForeign + prevLossEXT;
 
@@ -161,17 +165,15 @@ async function _calculateTaxForType(
         await storeNewLoss(OperationType.CRIPTO_EXT, netProfitEXT);
       }
 
-      // --- GERAÇÃO DO DARF (SOMA BRASIL + EXTERIOR) ---
-      // CORREÇÃO: Somamos incondicionalmente para exibir o valor total devido
       tax = taxBrazil + taxForeign;
 
       if (tax > 0) {
         if (taxBrazil > 0 && taxForeign > 0) {
-          codigoReceita = "4600 / IRPF (AAI)"; // Misto
+          codigoReceita = "4600 / IRPF (AAI)";
         } else if (taxBrazil > 0) {
-          codigoReceita = "4600"; // Apenas Nacional
+          codigoReceita = "4600";
         } else {
-          codigoReceita = "IRPF (AAI)"; // Apenas Exterior (Controle)
+          codigoReceita = "IRPF (AAI)";
         }
       }
 
@@ -209,8 +211,10 @@ async function _calculateTaxForType(
       }
 
       tax = taxDayTrade + taxSwingTrade;
+      
       if (tax > 0) {
-        codigoReceita = "6015";
+        tax = Math.max(0, tax - totalIrrf);
+        if (tax > 0) codigoReceita = "6015";
       }
       break;
     }
@@ -226,8 +230,10 @@ async function _calculateTaxForType(
         await storeNewLoss(OperationType.FII, netProfitFII);
       }
 
+      // CORREÇÃO: Desconto do IRRF antes da finalização
       if (tax > 0) {
-        codigoReceita = "6015";
+        tax = Math.max(0, tax - totalIrrf);
+        if (tax > 0) codigoReceita = "6015";
       }
       break;
     }
@@ -236,15 +242,15 @@ async function _calculateTaxForType(
   if (tax <= 0) {
     let detalhe = "Nenhum imposto devido.";
 
-    // Diagnóstico inteligente para entender o motivo do zero
-    if (assetType === AssetType.CRIPTO) {
+    if (totalIrrf > 0 && message === "Cálculo bem-sucedido.") {
+      detalhe = "Imposto retido na fonte (Dedo-duro) cobriu o valor devido ou não houve lucro tributável.";
+    } else if (assetType === AssetType.CRIPTO) {
       if (totalProfitForeign > 0) {
         detalhe = "Lucro no Exterior compensado por prejuízos anteriores.";
       } else if (totalSalesBrazil > 0 && totalSalesBrazil <= 35000) {
         detalhe = `Isento: Vendas Nacionais (R$ ${totalSalesBrazil.toLocaleString("pt-BR")}) abaixo de 35k.`;
       } else if (totalSalesBrazil === 0 && totalProfitForeign === 0) {
-        detalhe =
-          "Não foram detectados lucros tributáveis (Verifique se o ativo está marcado como 'Estrangeira').";
+        detalhe = "Não foram detectados lucros tributáveis (Verifique se o ativo está marcado como 'Estrangeira').";
       }
     }
 
@@ -604,24 +610,27 @@ export async function simulateTax(
 
   let tax = 0;
   let taxRate = 0;
+  let irrf = 0; 
 
   if (assetType === AssetType.ACAO) {
     if (isDayTrade) {
       taxRate = 0.2;
-      if (profit > 0) tax = profit * taxRate;
+      if (profit > 0) {
+        tax = profit * taxRate;
+        irrf = profit * 0.01; 
+      }
     } else {
       taxRate = 0.15;
+      irrf = saleValue * 0.00005; 
       if (saleValue <= 20000 && profit > 0) tax = 0;
       else if (profit > 0) tax = profit * taxRate;
     }
   } else if (assetType === AssetType.CRIPTO) {
-    taxRate = 0.15; //Lei 14.754
+    taxRate = 0.15;
 
     if (isForeign) {
-      // EXTERIOR: Lei 14.754 - Sem isenção de pequeno valor.
       if (profit > 0) tax = profit * taxRate;
     } else {
-      // NACIONAL: Mantém isenção para vendas < 35k
       if (saleValue <= 35000 && profit > 0) {
         tax = 0;
       } else if (profit > 0) {
@@ -631,6 +640,12 @@ export async function simulateTax(
   } else if (assetType === AssetType.FII) {
     taxRate = 0.2;
     if (profit > 0) tax = profit * taxRate;
+    if (isDayTrade && profit > 0) irrf = profit * 0.01;
+    else if (!isDayTrade) irrf = saleValue * 0.00005;
+  }
+
+  if (tax > 0) {
+    tax = Math.max(0, tax - irrf);
   }
 
   return {
