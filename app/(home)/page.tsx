@@ -11,11 +11,11 @@ import AssetAllocationCard from "./_components/asset-alocation-card";
 import MarketMoversCard from "./_components/market-movers-card";
 import LastTransactionsCard from "./_components/last-transactions-card";
 import { PortfolioHealth } from "./_components/portfolio-health";
-import { startOfMonth, endOfMonth } from "date-fns"; // <--- 1. Importe isso
+import { startOfMonth, endOfMonth } from "date-fns";
 
 interface HomeProps {
   searchParams: {
-    startDate?: string; // <--- 2. Mudou de year/month para startDate/endDate
+    startDate?: string;
     endDate?: string;
   };
 }
@@ -26,10 +26,8 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
     redirect("/login");
   }
 
-  // --- 3. NOVA LÓGICA DE DATA ---
   const now = new Date();
 
-  // Se não houver params, usa o início e fim do mês atual como padrão
   const startDate = searchParams.startDate
     ? new Date(searchParams.startDate)
     : startOfMonth(now);
@@ -37,9 +35,7 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
   const endDate = searchParams.endDate
     ? new Date(searchParams.endDate)
     : endOfMonth(now);
-  // -----------------------------
 
-  // --- 4. PASSA AS DATAS PARA O GET DASHBOARD ---
   const dashboardData = await getDashboard(startDate, endDate).catch(
     (error) => {
       console.error("Falha ao carregar dados do dashboard:", error);
@@ -58,31 +54,31 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
     },
   );
 
-  // --- CÁLCULOS PARA O PORTFOLIO HEALTH ---
   const cryptoAllocation = dashboardData.portfolioAllocation.find(
     (item) => item.type === "CRIPTO",
   );
 
   const cryptoTotal = cryptoAllocation ? Number(cryptoAllocation.value) : 0;
   const totalEquity = dashboardData.summary.currentPortfolioValue;
-  // ---------------------------------------
 
   return (
     <>
       <Navbar />
-      <div className="flex h-full flex-col space-y-6 overflow-hidden p-6">
-        <div className="flex items-center justify-end lg:justify-between">
-          <h1 className="hidden text-2xl font-bold lg:block">Dashboard</h1>
-          <div className="flex items-center gap-4">
+      <div className="flex h-full flex-col space-y-6 overflow-y-auto p-4 md:p-6 lg:overflow-hidden">
+        
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between w-full">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <TimeSelect />
             <AddTransactionDialog />
-            <TimeSelect /> {/* O TimeSelect agora controla a URL inteira */}
           </div>
         </div>
 
-        <div className="grid h-full grid-cols-1 gap-6 overflow-hidden lg:grid-cols-3">
-          {/* COLUNA ESQUERDA/CENTRAL (SCROLLABLE) */}
+        <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-3 lg:overflow-hidden">
+          
           <ScrollArea className="h-full lg:col-span-2">
-            <div className="flex flex-col gap-6 pr-6">
+            <div className="flex flex-col gap-6 lg:pr-6">
               <SummaryCards summary={dashboardData.summary} />
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -96,9 +92,9 @@ const DashboardPage = async ({ searchParams }: HomeProps) => {
             </div>
           </ScrollArea>
 
-          {/* COLUNA DIREITA (FIXA NO DESKTOP) */}
-          <ScrollArea className="hidden h-full lg:block">
-            <div className="flex flex-col gap-6">
+          
+          <ScrollArea className="h-full">
+            <div className="flex flex-col gap-6 pb-6 lg:pb-0">
               <PortfolioHealth
                 totalEquity={totalEquity}
                 cryptoTotal={cryptoTotal}

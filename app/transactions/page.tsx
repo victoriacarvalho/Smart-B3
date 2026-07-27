@@ -7,11 +7,11 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { ScrollArea } from "../_components/ui/scroll-area";
 import TimeSelect from "../(home)/_components/time-select";
-import { startOfMonth, endOfMonth, endOfDay } from "date-fns"; // <--- 1. ADICIONE ESTE IMPORT
+import { startOfMonth, endOfMonth, endOfDay } from "date-fns"; 
 
 interface TransactionsPageProps {
   searchParams: {
-    startDate?: string; // <--- 2. ALTERE AQUI (remova month/year)
+    startDate?: string; 
     endDate?: string;
   };
 }
@@ -23,7 +23,6 @@ const TransactionsPage = async ({ searchParams }: TransactionsPageProps) => {
     redirect("/login");
   }
 
-  // 3. SUBSTITUA A LÓGICA DE DATA POR ESTA:
   const now = new Date();
 
   const startDate = searchParams.startDate
@@ -31,9 +30,9 @@ const TransactionsPage = async ({ searchParams }: TransactionsPageProps) => {
     : startOfMonth(now);
 
   const endDate = searchParams.endDate
-    ? endOfDay(new Date(searchParams.endDate)) // Garante que pegue até o último segundo do dia
+    ? endOfDay(new Date(searchParams.endDate)) 
     : endOfMonth(now);
-  // ----------------------------------------
+
 
   const transactions = await db.transaction.findMany({
     where: {
@@ -63,22 +62,26 @@ const TransactionsPage = async ({ searchParams }: TransactionsPageProps) => {
   return (
     <>
       <Navbar />
-      <div className="flex h-full flex-col space-y-6 overflow-hidden p-6">
-        <div className="flex w-full items-center justify-between">
+      <div className="flex h-full flex-col space-y-6 p-4 md:p-6">
+        
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between w-full">
           <h1 className="text-2xl font-bold">Transações</h1>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             <TimeSelect />
             <AddTransactionDialog />
           </div>
         </div>
 
-        <ScrollArea className="h-full">
-          <DataTable
-            columns={transactionColumns}
-            data={JSON.parse(JSON.stringify(transactions))}
-          />
-        </ScrollArea>
+        <div className="w-full overflow-hidden">
+          <ScrollArea className="h-full w-full rounded-md">
+            <DataTable
+              columns={transactionColumns}
+              data={JSON.parse(JSON.stringify(transactions))}
+            />
+           
+          </ScrollArea>
+        </div>
       </div>
     </>
   );

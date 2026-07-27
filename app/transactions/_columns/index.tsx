@@ -29,7 +29,7 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Data
+          Ativo 
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -39,7 +39,7 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
       return (
         <Link
           href={`/investment/${assetId}`}
-          className="font-medium underline-offset-4 hover:underline"
+          className="font-medium underline-offset-4 hover:underline whitespace-nowrap"
         >
           {asset.symbol.toUpperCase()}
         </Link>
@@ -50,27 +50,41 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
     accessorKey: "type",
     header: "Tipo",
     cell: ({ row: { original: transaction } }) => (
-      <TransactionTypeBadge transaction={transaction} />
+      // Envolva o badge para garantir que não amasse
+      <div className="whitespace-nowrap">
+        <TransactionTypeBadge transaction={transaction} />
+      </div>
     ),
   },
   {
     accessorKey: "date",
     header: "Data",
-    cell: ({ row }) => new Date(row.original.date).toLocaleDateString("pt-BR"),
+    cell: ({ row }) => (
+      <div className="whitespace-nowrap">
+        {new Date(row.original.date).toLocaleDateString("pt-BR")}
+      </div>
+    ),
   },
   {
     accessorKey: "quantity",
     header: "Quantidade",
-    cell: ({ row }) => Number(row.original.quantity).toLocaleString("pt-BR"),
+    cell: ({ row }) => (
+      <div className="whitespace-nowrap">
+        {Number(row.original.quantity).toLocaleString("pt-BR")}
+      </div>
+    ),
   },
   {
     accessorKey: "unitPrice",
     header: "Preço Unitário",
-    cell: ({ row }) =>
-      new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      }).format(Number(row.original.unitPrice)),
+    cell: ({ row }) => (
+      <div className="whitespace-nowrap">
+        {new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        }).format(Number(row.original.unitPrice))}
+      </div>
+    ),
   },
   {
     id: "totalValue",
@@ -78,10 +92,14 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
     cell: ({ row }) => {
       const { quantity, unitPrice, fees } = row.original;
       const total = Number(quantity) * Number(unitPrice) + Number(fees);
-      return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      }).format(total);
+      return (
+        <div className="whitespace-nowrap font-medium">
+          {new Intl.NumberFormat("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          }).format(total)}
+        </div>
+      );
     },
   },
   {
@@ -91,25 +109,24 @@ export const transactionColumns: ColumnDef<TransactionColumnData>[] = [
       const assetType = row.original.asset.type;
       const { operationType, retentionPeriod } = row.original;
 
+      let content = <span className="text-muted-foreground">-</span>;
       if ((assetType === "ACAO" || assetType === "CRIPTO") && operationType) {
-        return OPERATION_TYPE_LABELS[operationType];
+        content = <>{OPERATION_TYPE_LABELS[operationType]}</>;
+      } else if (assetType === "FII" && retentionPeriod) {
+        content = <>{RETENTION_PERIOD_LABELS[retentionPeriod]}</>;
       }
-      if (assetType === "FII" && retentionPeriod) {
-        return RETENTION_PERIOD_LABELS[retentionPeriod];
-      }
-      return <span className="text-muted-foreground">-</span>;
+
+      return <div className="whitespace-nowrap">{content}</div>;
     },
   },
   {
     id: "actions",
-    header: () => <div className="text-right">Ações</div>,
+    header: () => <div className="text-right whitespace-nowrap">Ações</div>,
     cell: ({ row }) => {
-      // 2. Obter a transação da linha atual
       const transactionData = row.original;
-
       return (
-        <div className="flex items-center justify-end gap-1">
-          <EditTransactionButton transaction={transactionData} />{" "}
+        <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+          <EditTransactionButton transaction={transactionData} />
           <TransactionActions transaction={transactionData} />
         </div>
       );

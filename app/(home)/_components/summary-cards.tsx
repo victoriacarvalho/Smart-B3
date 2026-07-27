@@ -9,7 +9,7 @@ import SummaryCard from "./summary-card";
 
 interface SummaryCardsProps {
   summary?: {
-    totalNetProfit: number; // Não mais usado para o card de Lucro/Prejuízo
+    totalNetProfit: number; 
     totalTaxDue: number;
     totalSold: number;
     totalInvestedCost: number;
@@ -22,20 +22,14 @@ const SummaryCards = ({ summary }: SummaryCardsProps) => {
     return null;
   }
 
-  // --- LÓGICA ANTIGA ---
-  // const isProfit = summary.totalNetProfit >= 0;
-
-  // --- LÓGICA NOVA ---
-  // Calcula o lucro/prejuízo total da carteira
   const portfolioProfitLoss =
     summary.currentPortfolioValue - summary.totalInvestedCost;
 
-  // Verifica se é lucro (positivo ou zero) ou prejuízo (negativo)
   const isPortfolioProfit = portfolioProfitLoss >= 0;
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6  md:grid-cols-2">
         <SummaryCard
           icon={<Wallet className="h-6 w-6 text-primary" />}
           title="Valor Total da Carteira"
@@ -44,21 +38,20 @@ const SummaryCards = ({ summary }: SummaryCardsProps) => {
         />
         <SummaryCard
           icon={
-            isPortfolioProfit ? ( // <-- Usa a nova variável
+            isPortfolioProfit ? ( 
               <TrendingUp className="h-6 w-6 text-green-600" />
             ) : (
               <TrendingDown className="h-6 w-6 text-red-600" />
             )
           }
-          // Título atualizado para refletir o P/L total
           title={
             isPortfolioProfit
               ? "Lucro/Prejuízo da Carteira"
               : "Prejuízo da Carteira"
           }
-          amount={portfolioProfitLoss} // <-- Usa a nova variável
+          amount={portfolioProfitLoss} 
           size="large"
-          isProfit={isPortfolioProfit} // <-- Usa a nova variável
+          isProfit={isPortfolioProfit} 
         />
       </div>
 

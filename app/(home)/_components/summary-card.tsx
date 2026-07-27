@@ -16,13 +16,16 @@ const SummaryCard = ({
   title,
   amount,
   size = "small",
+  isProfit, 
 }: SummaryCardProps) => {
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-4">
         {icon}
         <p
-          className={`${size === "small" ? "text-muted-foreground" : "text-white"}`}
+          className={cn(
+            size === "small" ? "text-muted-foreground" : "text-foreground"
+          )}
         >
           {title}
         </p>
@@ -32,6 +35,11 @@ const SummaryCard = ({
           className={cn(
             "font-bold",
             size === "small" ? "text-2xl" : "text-4xl",
+            isProfit !== undefined && (
+              isProfit 
+                ? "text-green-600 dark:text-green-500" 
+                : "text-red-600 dark:text-red-500"
+            )
           )}
         >
           {Intl.NumberFormat("pt-BR", {
